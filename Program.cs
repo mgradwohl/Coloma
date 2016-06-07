@@ -2,9 +2,6 @@
 using System.Diagnostics;
 using System.Diagnostics.Eventing.Reader;
 using System.IO;
-using System.Security.Principal;
-
-// logs to gather: Application, Security, Setup, System
 
 namespace Coloma
 {
@@ -13,8 +10,17 @@ namespace Coloma
         static void Main(string[] args)
         {
             // create the file
-            string filename = @"\\iefs\users\mattgr\Coloma\" + "Coloma" + "_" + System.Environment.MachineName + "_" + System.Environment.UserName + "_" + System.Environment.TickCount.ToString() + ".csv";
-            StreamWriter sw = new StreamWriter(filename, false, System.Text.Encoding.UTF8);
+            string filename = @"\\iefs\users\mattgr\Coloma" + "\\Coloma" + "_" + Environment.MachineName + "_" + Environment.UserName + "_" + Environment.TickCount.ToString() + ".csv";
+            StreamWriter sw;
+            try
+            {
+                sw = new StreamWriter(filename, false, System.Text.Encoding.UTF8);
+            }
+            catch (Exception)
+            {
+                filename = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + "\\Coloma" + "_" + Environment.MachineName + "_" + Environment.UserName + "_" + Environment.TickCount.ToString() + ".csv";
+                sw = new StreamWriter(filename, false, System.Text.Encoding.UTF8);
+            }
 
             // just get logs for 3/1/2016 and after
             DateTime dt = new DateTime(2016, 3, 1, 0, 0, 0, 0, DateTimeKind.Local);
@@ -62,11 +68,8 @@ namespace Coloma
                     if ((entry.EntryType == EventLogEntryType.Error) ||
                         (entry.EntryType == EventLogEntryType.Warning))
                     {
-                        string msg = entry.Message.Replace("\t", " ");
-                        msg = msg.Replace("\r\n", "<br>");
-                        msg = msg.Replace("\n", "<br>");
-                        msg = msg.Replace("<br><br>", "<br>");
-                        sw.WriteLine("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}", build, System.Environment.MachineName, System.Environment.UserName, log.LogDisplayName, entry.EntryType.ToString(), entry.TimeGenerated.ToString(), entry.Source, msg);
+                        string msg = CleanUpMessage(entry.Message);
+                        sw.WriteLine("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}", build, Environment.MachineName, Environment.UserName, log.LogDisplayName, entry.EntryType.ToString(), entry.TimeGenerated.ToString(), entry.Source, msg);
                     }
                 }
             }
@@ -89,15 +92,21 @@ namespace Coloma
                         (entry.Level == (byte)StandardEventLevel.Error) ||
                         (entry.Level == (byte)StandardEventLevel.Warning))
                     {
-                        string msg = entry.FormatDescription();
-                        msg = msg.Replace("\t", " ");
-                        msg = msg.Replace("\r\n", "<br>");
-                        msg = msg.Replace("\n", "<br>");
-                        msg = msg.Replace("<br><br>", "<br>");
-                        sw.WriteLine("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}", build, System.Environment.MachineName, System.Environment.UserName, "Setup", entry.Level.ToString(), entry.TimeCreated.ToString(), entry.ProviderName, msg);
+                        string msg = CleanUpMessage(entry.FormatDescription());
+                        sw.WriteLine("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}", build, Environment.MachineName, Environment.UserName, "Setup", entry.Level.ToString(), entry.TimeCreated.ToString(), entry.ProviderName, msg);
                     }
                 }
             }
+        }
+
+        static string CleanUpMessage(string Message)
+        {
+            string msg = Message.Replace("\t", " ");
+            msg = msg.Replace("\r\n", "<br>");
+            msg = msg.Replace("\n", "<br>");
+            msg = msg.Replace("<br><br>", "<br>");
+
+            return msg;
         }
     }
 }

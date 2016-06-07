@@ -39,8 +39,8 @@ namespace Coloma
                 // all these converts suck
                 uint rev = Convert.ToUInt32(rk.GetValue("UBR").ToString());
 
-                // "10586.318"
-                ret = (build + "." + rev.ToString());
+                // "th2_release\t10586.318"
+                ret = (branch + "\t" + build + "." + rev.ToString());
             }
 
             rk.Close();

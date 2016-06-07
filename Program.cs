@@ -2,9 +2,6 @@
 using System.Diagnostics;
 using System.Diagnostics.Eventing.Reader;
 using System.IO;
-using System.Security.Principal;
-
-// logs to gather: Application, Security, Setup, System
 
 namespace Coloma
 {

@@ -68,10 +68,7 @@ namespace Coloma
                     if ((entry.EntryType == EventLogEntryType.Error) ||
                         (entry.EntryType == EventLogEntryType.Warning))
                     {
-                        string msg = entry.Message.Replace("\t", " ");
-                        msg = msg.Replace("\r\n", "<br>");
-                        msg = msg.Replace("\n", "<br>");
-                        msg = msg.Replace("<br><br>", "<br>");
+                        string msg = CleanUpMessage(entry.Message);
                         sw.WriteLine("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}", build, Environment.MachineName, Environment.UserName, log.LogDisplayName, entry.EntryType.ToString(), entry.TimeGenerated.ToString(), entry.Source, msg);
                     }
                 }
@@ -95,16 +92,21 @@ namespace Coloma
                         (entry.Level == (byte)StandardEventLevel.Error) ||
                         (entry.Level == (byte)StandardEventLevel.Warning))
                     {
-                        string msg = entry.FormatDescription();
-                        msg = msg.Replace("\t", " ");
-                        msg = msg.Replace("\r\n", "<br>");
-                        msg = msg.Replace("\n", "<br>");
-                        msg = msg.Replace("<br><br>", "<br>");
+                        string msg = CleanUpMessage(entry.FormatDescription());
                         sw.WriteLine("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}", build, Environment.MachineName, Environment.UserName, "Setup", entry.Level.ToString(), entry.TimeCreated.ToString(), entry.ProviderName, msg);
-
                     }
                 }
             }
+        }
+
+        static string CleanUpMessage(string Message)
+        {
+            string msg = Message.Replace("\t", " ");
+            msg = msg.Replace("\r\n", "<br>");
+            msg = msg.Replace("\n", "<br>");
+            msg = msg.Replace("<br><br>", "<br>");
+
+            return msg;
         }
     }
 }

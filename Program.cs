@@ -12,16 +12,18 @@ namespace Coloma
     {
         static void Main(string[] args)
         {
-            EventLog[] eventLogs;
-            eventLogs = EventLog.GetEventLogs();
-            foreach (EventLog evt in eventLogs)
-            {
-                Console.WriteLine("evt.Log.ToString(): " + evt.Log.ToString() + "\tevt.LogDisplayName: " + evt.LogDisplayName);
-            }
-
             // create the file
-            string filename = @"\\iefs\users\mattgr\Coloma\" + "Coloma" + "_" + System.Environment.MachineName + "_" + System.Environment.UserName + "_" + System.Environment.TickCount.ToString() + ".csv";
-            StreamWriter sw = new StreamWriter(filename, false, System.Text.Encoding.UTF8);
+            string filename = @"\\iefs\users\mattgr\Coloma" + "\\Coloma" + "_" + System.Environment.MachineName + "_" + System.Environment.UserName + "_" + System.Environment.TickCount.ToString() + ".csv";
+            StreamWriter sw;
+            try
+            {
+                sw = new StreamWriter(filename, false, System.Text.Encoding.UTF8);
+            }
+            catch (Exception)
+            {
+                filename = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + "\\Coloma" + "_" + System.Environment.MachineName + "_" + System.Environment.UserName + "_" + System.Environment.TickCount.ToString() + ".csv";
+                sw = new StreamWriter(filename, false, System.Text.Encoding.UTF8);
+            }
 
             // just get logs for 3/1/2016 and after
             DateTime dt = new DateTime(2016, 3, 1, 0, 0, 0, 0, DateTimeKind.Local);
@@ -74,8 +76,6 @@ namespace Coloma
                     }
                 }
             }
-
-
         }
 
         static void WriteSetupLogToStream(StreamWriter sw, DateTime dt)
@@ -83,7 +83,7 @@ namespace Coloma
             string build = WindowsVersion.GetWindowsBuildandRevision();
 
             EventLogQuery query = new EventLogQuery("Setup", PathType.LogName);
-            query.ReverseDirection = false; // this tells it to start with newest first
+            query.ReverseDirection = false;
             EventLogReader reader = new EventLogReader(query);
 
             EventRecord entry;
@@ -104,7 +104,6 @@ namespace Coloma
 
                     }
                 }
-                // each eventRecord is an item from the event log
             }
         }
     }

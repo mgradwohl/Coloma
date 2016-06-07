@@ -13,7 +13,7 @@ namespace Coloma
         static void Main(string[] args)
         {
             // create the file
-            string filename = @"\\iefs\users\mattgr\Coloma" + "\\Coloma" + "_" + System.Environment.MachineName + "_" + System.Environment.UserName + "_" + System.Environment.TickCount.ToString() + ".csv";
+            string filename = @"\\iefs\users\mattgr\Coloma" + "\\Coloma" + "_" + Environment.MachineName + "_" + Environment.UserName + "_" + Environment.TickCount.ToString() + ".csv";
             StreamWriter sw;
             try
             {
@@ -21,7 +21,7 @@ namespace Coloma
             }
             catch (Exception)
             {
-                filename = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + "\\Coloma" + "_" + System.Environment.MachineName + "_" + System.Environment.UserName + "_" + System.Environment.TickCount.ToString() + ".csv";
+                filename = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + "\\Coloma" + "_" + Environment.MachineName + "_" + Environment.UserName + "_" + Environment.TickCount.ToString() + ".csv";
                 sw = new StreamWriter(filename, false, System.Text.Encoding.UTF8);
             }
 
@@ -72,7 +72,7 @@ namespace Coloma
                         msg = msg.Replace("\r\n", "<br>");
                         msg = msg.Replace("\n", "<br>");
                         msg = msg.Replace("<br><br>", "<br>");
-                        sw.WriteLine("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}", build, System.Environment.MachineName, System.Environment.UserName, log.LogDisplayName, entry.EntryType.ToString(), entry.TimeGenerated.ToString(), entry.Source, msg);
+                        sw.WriteLine("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}", build, Environment.MachineName, Environment.UserName, log.LogDisplayName, entry.EntryType.ToString(), entry.TimeGenerated.ToString(), entry.Source, msg);
                     }
                 }
             }
@@ -100,7 +100,7 @@ namespace Coloma
                         msg = msg.Replace("\r\n", "<br>");
                         msg = msg.Replace("\n", "<br>");
                         msg = msg.Replace("<br><br>", "<br>");
-                        sw.WriteLine("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}", build, System.Environment.MachineName, System.Environment.UserName, "Setup", entry.Level.ToString(), entry.TimeCreated.ToString(), entry.ProviderName, msg);
+                        sw.WriteLine("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}", build, Environment.MachineName, Environment.UserName, "Setup", entry.Level.ToString(), entry.TimeCreated.ToString(), entry.ProviderName, msg);
 
                     }
                 }

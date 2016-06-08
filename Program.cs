@@ -26,32 +26,31 @@ namespace Coloma
             DateTime dt = new DateTime(2016, 3, 1, 0, 0, 0, 0, DateTimeKind.Local);
 
             Console.WriteLine();
-            Console.WriteLine("Coloma is gathering your log entries");
+            Console.WriteLine("Coloma is gathering log entries");
             Console.WriteLine();
-            Console.WriteLine("Any entry written after " + dt.ToShortDateString());
-            Console.WriteLine("in the following logs: system, security, hardwareevents, setup, and application");
-            Console.WriteLine("will be saved to " + filename);
+            Console.WriteLine("Any error, warning, or KB install written after " + dt.ToShortDateString());
+            Console.WriteLine("From the following logs: system, security, hardwareevents, setup, and application");
+            Console.WriteLine("Data will be saved to " + filename);
+            Console.WriteLine();
+
+            string[] Logs = { "System", "HardwareEvents", "Application", "Security" };
 
             // one log at a time
-            EventLog log = new EventLog("System", ".");
-            WriteLogToStream(log, sw, dt);
-            log.Close();
+            foreach (string log in Logs)
+            {
+                EventLog eventlog = new EventLog(log, ".");
+                Console.Write(log + "... ");
+                WriteLogToStream(eventlog, sw, dt);
+                eventlog.Close();
+                Console.WriteLine("done");
+            }
 
-            log = new EventLog("HardwareEvents", ".");
-            WriteLogToStream(log, sw, dt);
-            log.Close();
-
-            log = new EventLog("Application", ".");
-            WriteLogToStream(log, sw, dt);
-            log.Close();
-
-            log = new EventLog("Security", ".");
-            WriteLogToStream(log, sw, dt);
-            log.Close();
-
+            Console.Write("Setup... ");
             WriteSetupLogToStream(sw, dt);
+            Console.WriteLine("done");
 
             sw.Close();
+
             Console.WriteLine();
             Console.WriteLine("Done, thank you. Hit any key to exit");
             Console.ReadLine();
@@ -59,7 +58,8 @@ namespace Coloma
 
         static void WriteLogToStream(EventLog log, StreamWriter sw, DateTime dt)
         {
-            string build = WindowsVersion.GetWindowsBuildandRevision();
+            WindowsVersion.WindowsVersionInfo wvi = new WindowsVersion.WindowsVersionInfo();
+            WindowsVersion.GetWindowsBuildandRevision(wvi);
             
             foreach (EventLogEntry entry in log.Entries)
             {
@@ -69,7 +69,7 @@ namespace Coloma
                         (entry.EntryType == EventLogEntryType.Warning))
                     {
                         string msg = CleanUpMessage(entry.Message);
-                        sw.WriteLine("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}", build, Environment.MachineName, Environment.UserName, log.LogDisplayName, entry.EntryType.ToString(), entry.TimeGenerated.ToString(), entry.Source, msg);
+                        sw.WriteLine("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\t{9}", wvi.branch, wvi.build.ToString(), wvi.revision.ToString(), Environment.MachineName, Environment.UserName, log.LogDisplayName, entry.EntryType.ToString(), entry.TimeGenerated.ToString(), entry.Source, msg);
                     }
                 }
             }
@@ -77,7 +77,8 @@ namespace Coloma
 
         static void WriteSetupLogToStream(StreamWriter sw, DateTime dt)
         {
-            string build = WindowsVersion.GetWindowsBuildandRevision();
+            WindowsVersion.WindowsVersionInfo wvi = new WindowsVersion.WindowsVersionInfo();
+            WindowsVersion.GetWindowsBuildandRevision(wvi);
 
             EventLogQuery query = new EventLogQuery("Setup", PathType.LogName);
             query.ReverseDirection = false;
@@ -90,10 +91,11 @@ namespace Coloma
                 {
                     if ((entry.Level == (byte)StandardEventLevel.Critical) ||
                         (entry.Level == (byte)StandardEventLevel.Error) ||
-                        (entry.Level == (byte)StandardEventLevel.Warning))
+                        (entry.Level == (byte)StandardEventLevel.Warning) ||
+                        (entry.Id == 2))
                     {
                         string msg = CleanUpMessage(entry.FormatDescription());
-                        sw.WriteLine("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}", build, Environment.MachineName, Environment.UserName, "Setup", entry.Level.ToString(), entry.TimeCreated.ToString(), entry.ProviderName, msg);
+                        sw.WriteLine("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\t{9}", wvi.branch, wvi.build.ToString(), wvi.revision.ToString(), Environment.MachineName, Environment.UserName, "Setup", entry.LevelDisplayName, entry.TimeCreated.ToString(), entry.ProviderName, msg);
                     }
                 }
             }

@@ -15,7 +15,14 @@ namespace Coloma
         //UBR - AKA "Revision" or "QFE" Number.This is initially set to the revision number of the RTM build.It is the last part of a full version string e.g. 10.0.10240.16384 (16384 = revision number).
         //  Its value changes when update packages are installed(this value is defined in source as VER_PRODUCTBUILD_QFE). 
 
-        public static string GetWindowsBuildandRevision()
+        public class WindowsVersionInfo
+        {
+            public string branch;
+            public uint build;
+            public uint revision;
+        }
+
+        public static void GetWindowsBuildandRevision(WindowsVersionInfo wvi)
         {
             const string keyName = "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion";
 
@@ -31,20 +38,15 @@ namespace Coloma
                 rk = rk.OpenSubKey(keyName);
             }
 
-            string ret = null;
             if (rk != null)
             {
-                string branch = (string)rk.GetValue("BuildBranch");
-                string build = (string)rk.GetValue("CurrentBuild");
+                wvi.branch = (string)rk.GetValue("BuildBranch");
                 // all these converts suck
-                uint rev = Convert.ToUInt32(rk.GetValue("UBR").ToString());
+                wvi.build = Convert.ToUInt32(rk.GetValue("CurrentBuild").ToString());
+                wvi.revision = Convert.ToUInt32(rk.GetValue("UBR").ToString());
 
-                // "th2_release\t10586.318"
-                ret = (branch + "\t" + build + "." + rev.ToString());
             }
-
             rk.Close();
-            return ret;
         }
     }
 }

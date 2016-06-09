@@ -3,6 +3,74 @@ using System;
 
 namespace Coloma
 {
+    public class KBRevision
+    {
+        private uint build;
+        private uint revision;
+        private string kb;
+        private DateTime installdate;
+
+        public uint Build
+        {
+            get
+            {
+                return build;
+            }
+
+            set
+            {
+                build = value;
+            }
+        }
+
+        public uint Revision
+        {
+            get
+            {
+                return revision;
+            }
+
+            set
+            {
+                revision = value;
+            }
+        }
+
+        public string Kb
+        {
+            get
+            {
+                return kb;
+            }
+
+            set
+            {
+                kb = value;
+            }
+        }
+
+        public DateTime Installdate
+        {
+            get
+            {
+                return installdate;
+            }
+
+            set
+            {
+                installdate = value;
+            }
+        }
+
+        public KBRevision(uint b, uint r, string k)
+        {
+            Build = b;
+            Revision = r;
+            Kb = k;
+            Installdate = new DateTime();
+        }
+    }
+
     public class WindowsVersion
     {
         // https://osgwiki.com/wiki/OS_Versioning_Identifiers_for_Servicing

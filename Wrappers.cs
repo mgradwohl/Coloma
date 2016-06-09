@@ -1,5 +1,6 @@
 ﻿using Microsoft.Win32;
 using System;
+using System.Linq;
 
 namespace Coloma
 {
@@ -73,15 +74,13 @@ namespace Coloma
 
         public override string ToString()
         {
-            string ret = "Coloma Event";
-            ret = string.Format("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\t{9}", branch, build.ToString(), revision.ToString(), machineName, userName, logname, level, timeCreated.ToString(), source, message);
+            string ret = string.Join("\t", branch, build.ToString(), revision.ToString(), machineName, userName, logname, level, timeCreated.ToString(), source, message);
             return ret;
         }
 
         public static string Header()
         {
-            string ret = "Coloma Headers";
-            ret = string.Format("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\t{9}", nameof(branch), nameof(build), nameof(revision), nameof(machineName), nameof(userName), nameof(logname), nameof(level), nameof(timeCreated), nameof(source), nameof(message));
+            string ret = string.Join("\t", nameof(branch), nameof(build), nameof(revision), nameof(machineName), nameof(userName), nameof(logname), nameof(level), nameof(timeCreated), nameof(source), nameof(message));
             return ret;
         }
 
@@ -89,62 +88,13 @@ namespace Coloma
 
     public class KBRevision
     {
-        private uint build;
-        private uint revision;
-        private string kb;
-        private DateTime installdate;
+        public uint Build { get; set; }
 
-        public uint Build
-        {
-            get
-            {
-                return build;
-            }
+        public uint Revision { get; set; }
 
-            set
-            {
-                build = value;
-            }
-        }
+        public string Kb { get; set; }
 
-        public uint Revision
-        {
-            get
-            {
-                return revision;
-            }
-
-            set
-            {
-                revision = value;
-            }
-        }
-
-        public string Kb
-        {
-            get
-            {
-                return kb;
-            }
-
-            set
-            {
-                kb = value;
-            }
-        }
-
-        public DateTime Installdate
-        {
-            get
-            {
-                return installdate;
-            }
-
-            set
-            {
-                installdate = value;
-            }
-        }
+        public DateTime Installdate { get; set; }
 
         public KBRevision(uint b, uint r, string k)
         {

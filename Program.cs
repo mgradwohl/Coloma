@@ -6,38 +6,11 @@ using System.IO;
 
 namespace Coloma
 {
-    public class ColomaEvent
-    {
-        private string branch;
-        private uint build;
-        private uint revision;
-        string level;
-        private string machineName;
-        private string userName;
-        private string logname;
-        private DateTime timeCreated;
-        private string source;
-        private string message;
-
-        public ColomaEvent(string branch, uint build, uint revision, string machineName, string userName, string logName, string level, DateTime timeCreated, string source, string Message)
-        {
-            this.branch = branch;
-            this.build = build;
-            this.revision = revision;
-            this.machineName = machineName;
-            this.userName = userName;
-            this.logname = logName;
-            this.level = level;
-            this.timeCreated = timeCreated;
-            this.source = source;
-            this.message = Message;
-        }
-    }
-
     class Program
     {
         static void Main(string[] args)
         {
+            // bail out if the user isn't running Windows 10
             if (Environment.OSVersion.Version.Major < 10)
             {
                 Console.WriteLine();
@@ -53,22 +26,6 @@ namespace Coloma
             Console.WriteLine();
             Console.WriteLine("Coloma is gathering log entries");
             Console.WriteLine();
-
-            List<KBRevision> kbrlist = new List<KBRevision>();
-            kbrlist.Add(new KBRevision(10586, 318, "KB3156421"));
-            kbrlist.Add(new KBRevision(10586, 218, "KB3147458"));
-            kbrlist.Add(new KBRevision(10586, 164, "KB3140768"));
-            kbrlist.Add(new KBRevision(10586, 122, "KB3140743"));
-            kbrlist.Add(new KBRevision(10586, 104, "KB3135173"));
-            kbrlist.Add(new KBRevision(10586, 71, "KB3124262"));
-            kbrlist.Add(new KBRevision(10586, 63, "KB3124263"));
-            kbrlist.Add(new KBRevision(10586, 36, "KB3124200"));
-            kbrlist.Add(new KBRevision(10586, 29, "KB3116900"));
-            kbrlist.Add(new KBRevision(10586, 17, "KB3116908"));
-            kbrlist.Add(new KBRevision(10586, 14, "KB3120677"));
-            kbrlist.Add(new KBRevision(10586, 11, "KB3118754"));
-
-            List<ColomaEvent> eventlist = new List<ColomaEvent>();
 
             // create the file on the network share, unless it's unavailable, then use the desktop
             string filename = @"\\iefs\users\mattgr\Coloma" + "\\Coloma" + "_" + Environment.MachineName + "_" + Environment.UserName + "_" + Environment.TickCount.ToString() + ".csv";
@@ -92,6 +49,24 @@ namespace Coloma
             Console.WriteLine("Data will be saved to " + filename);
             Console.WriteLine();
 
+            Console.Write("KB Articles... ");
+            List<KBRevision> kbrlist = new List<KBRevision>();
+            kbrlist.Add(new KBRevision(10586, 318, "KB3156421"));
+            kbrlist.Add(new KBRevision(10586, 218, "KB3147458"));
+            kbrlist.Add(new KBRevision(10586, 164, "KB3140768"));
+            kbrlist.Add(new KBRevision(10586, 122, "KB3140743"));
+            kbrlist.Add(new KBRevision(10586, 104, "KB3135173"));
+            kbrlist.Add(new KBRevision(10586, 71, "KB3124262"));
+            kbrlist.Add(new KBRevision(10586, 63, "KB3124263"));
+            kbrlist.Add(new KBRevision(10586, 36, "KB3124200"));
+            kbrlist.Add(new KBRevision(10586, 29, "KB3116900"));
+            kbrlist.Add(new KBRevision(10586, 17, "KB3116908"));
+            kbrlist.Add(new KBRevision(10586, 14, "KB3120677"));
+            kbrlist.Add(new KBRevision(10586, 11, "KB3118754"));
+            Console.WriteLine("done");
+
+            List<ColomaEvent> eventlist = new List<ColomaEvent>();
+
             Console.Write("Setup... ");
             // this will also fill in the list of revisions so we know when a build was updated
             AddSetupLogToList(kbrlist, eventlist, dt);
@@ -108,11 +83,45 @@ namespace Coloma
                 Console.WriteLine("done");
             }
 
+            Console.Write("Sort and fixup... ");
+            SortandFix(eventlist);
+            Console.WriteLine("done");
+
+            Console.Write("Writing file");
+            int i = 0;
+            foreach (ColomaEvent evt in eventlist)
+            {
+                i++;
+                sw.WriteLine(evt.ToString());
+                if (i % 10 == 0)
+                {
+                    Console.Write(".");
+                }
+            }
+            Console.WriteLine(" done");
             sw.Close();
 
             Console.WriteLine();
             Console.WriteLine("Done, thank you. Hit any key to exit");
             Console.ReadLine();
+        }
+
+        private static void SortandFix(List<ColomaEvent> eventlist)
+        {
+            // sort the list by date
+            eventlist.Sort();
+            uint r = 11;
+            foreach (ColomaEvent evt in eventlist)
+            {
+                if (evt.Logname == "Setup")
+                {
+                    r = evt.Revision;
+                }
+                else
+                {
+                    evt.Revision = r;
+                }
+            }
         }
 
         static void AddSetupLogToList(List<KBRevision> kbrlist, List<ColomaEvent> list, DateTime dt)
@@ -165,7 +174,7 @@ namespace Coloma
         {
             WindowsVersion.WindowsVersionInfo wvi = new WindowsVersion.WindowsVersionInfo();
             WindowsVersion.GetWindowsBuildandRevision(wvi);
-            
+
             foreach (EventLogEntry entry in log.Entries)
             {
                 if (entry.TimeGenerated > dt)
@@ -174,7 +183,7 @@ namespace Coloma
                         (entry.EntryType == EventLogEntryType.Warning))
                     {
                         string msg = CleanUpMessage(entry.Message);
-                        list.Add(new ColomaEvent(wvi.branch, wvi.build, wvi.revision, entry.MachineName, Environment.UserName, log.LogDisplayName, entry.EntryType.ToString(), entry.TimeGenerated, entry.Source, msg));
+                        list.Add(new ColomaEvent(wvi.branch, wvi.build, 0, entry.MachineName, Environment.UserName, log.LogDisplayName, entry.EntryType.ToString(), entry.TimeGenerated, entry.Source, msg));
                     }
                 }
             }

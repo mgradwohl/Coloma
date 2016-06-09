@@ -3,6 +3,82 @@ using System;
 
 namespace Coloma
 {
+    public class ColomaEvent : IComparable
+    {
+        private string branch;
+        private uint build;
+        private uint revision;
+        string level;
+        private string machineName;
+        private string userName;
+        private string logname;
+        private DateTime timeCreated;
+        private string source;
+        private string message;
+
+        public uint Revision
+        {
+            get
+            {
+                return revision;
+            }
+
+            set
+            {
+                revision = value;
+            }
+        }
+
+        public string Logname
+        {
+            get
+            {
+                return logname;
+            }
+
+            set
+            {
+                logname = value;
+            }
+        }
+
+        public ColomaEvent(string branch, uint build, uint revision, string machineName, string userName, string logName, string level, DateTime timeCreated, string source, string Message)
+        {
+            this.branch = branch;
+            this.build = build;
+            this.Revision = revision;
+            this.machineName = machineName;
+            this.userName = userName;
+            this.Logname = logName;
+            this.level = level;
+            this.timeCreated = timeCreated;
+            this.source = source;
+            this.message = Message;
+        }
+
+        public int CompareTo(object obj)
+        {
+            ColomaEvent eventToCompare = obj as ColomaEvent;
+            if (eventToCompare.timeCreated < timeCreated)
+            {
+                return 1;
+            }
+            if (eventToCompare.timeCreated > timeCreated)
+            {
+                return -1;
+            }
+
+            return 0;
+        }
+
+        public override string ToString()
+        {
+            string ret = "Coloma Event";
+            ret = string.Format("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\t{9}", branch, build.ToString(), revision.ToString(), machineName, userName, logname, level, timeCreated.ToString(), source, message);
+            return ret;
+        }
+    }
+
     public class KBRevision
     {
         private uint build;

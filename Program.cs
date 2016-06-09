@@ -193,9 +193,9 @@ namespace Coloma
             }
         }
 
-        static string CleanUpMessage(string Message)
+        static string CleanUpMessage(string message)
         {
-            string msg = Message.Replace("\t", " ");
+            string msg = message.Replace("\t", " ");
             msg = msg.Replace("\r\n", "<br>");
             msg = msg.Replace("\n", "<br>");
             msg = msg.Replace("<br><br>", "<br>");

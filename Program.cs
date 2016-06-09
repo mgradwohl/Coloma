@@ -6,6 +6,34 @@ using System.IO;
 
 namespace Coloma
 {
+    public class ColomaEvent
+    {
+        private string branch;
+        private uint build;
+        private uint revision;
+        string level;
+        private string machineName;
+        private string userName;
+        private string logname;
+        private DateTime timeCreated;
+        private string source;
+        private string message;
+
+        public ColomaEvent(string branch, uint build, uint revision, string machineName, string userName, string logName, string level, DateTime timeCreated, string source, string Message)
+        {
+            this.branch = branch;
+            this.build = build;
+            this.revision = revision;
+            this.machineName = machineName;
+            this.userName = userName;
+            this.logname = logName;
+            this.level = level;
+            this.timeCreated = timeCreated;
+            this.source = source;
+            this.message = Message;
+        }
+    }
+
     class Program
     {
         static void Main(string[] args)
@@ -40,6 +68,8 @@ namespace Coloma
             kbrlist.Add(new KBRevision(10586, 14, "KB3120677"));
             kbrlist.Add(new KBRevision(10586, 11, "KB3118754"));
 
+            List<ColomaEvent> eventlist = new List<ColomaEvent>();
+
             // create the file on the network share, unless it's unavailable, then use the desktop
             string filename = @"\\iefs\users\mattgr\Coloma" + "\\Coloma" + "_" + Environment.MachineName + "_" + Environment.UserName + "_" + Environment.TickCount.ToString() + ".csv";
             StreamWriter sw;
@@ -56,7 +86,6 @@ namespace Coloma
             // just get logs for 3/1/2016 and after
             DateTime dt = new DateTime(2016, 3, 1, 0, 0, 0, 0, DateTimeKind.Local);
 
-
             // Tell the user what we're doing
             Console.WriteLine("Any error, warning, or KB install written after " + dt.ToShortDateString());
             Console.WriteLine("From the following logs: system, security, hardwareevents, setup, and application");
@@ -65,7 +94,7 @@ namespace Coloma
 
             Console.Write("Setup... ");
             // this will also fill in the list of revisions so we know when a build was updated
-            WriteSetupLogToStream(kbrlist, sw, dt);
+            AddSetupLogToList(kbrlist, eventlist, dt);
             Console.WriteLine("done");
 
             // one log at a time
@@ -74,7 +103,7 @@ namespace Coloma
             {
                 EventLog eventlog = new EventLog(log, ".");
                 Console.Write(log + "... ");
-                WriteLogToStream(eventlog, sw, dt);
+                AddStandardLogToList(eventlog, eventlist, dt);
                 eventlog.Close();
                 Console.WriteLine("done");
             }
@@ -86,7 +115,7 @@ namespace Coloma
             Console.ReadLine();
         }
 
-        static void WriteSetupLogToStream(List<KBRevision> kbrlist, StreamWriter sw, DateTime dt)
+        static void AddSetupLogToList(List<KBRevision> kbrlist, List<ColomaEvent> list, DateTime dt)
         {
             // this retrieves the build.revision and branch for the current client
             WindowsVersion.WindowsVersionInfo wvi = new WindowsVersion.WindowsVersionInfo();
@@ -110,7 +139,7 @@ namespace Coloma
                     if (entry.Id == 2)
                     {
                         // this is a KB installed message, figure out which KB it is and update the revision
-                        string kb = "KB31";
+                        string kb = "KB";
                         int i = msg.IndexOf(kb);
 
                         if (-1 != i)
@@ -124,24 +153,19 @@ namespace Coloma
                                 {
                                     revision = rev.Revision;
                                 }
-                                else
-                                {
-                                    // unknown
-                                    revision = 0xffff;
-                                }
                             }
                         }
                     }
-                    sw.WriteLine("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\t{9}", wvi.branch, wvi.build.ToString(), revision.ToString(), entry.MachineName, Environment.UserName, "Setup", entry.LevelDisplayName, entry.TimeCreated.ToString(), entry.ProviderName, msg);
+                    list.Add(new ColomaEvent(wvi.branch, wvi.build, revision, entry.MachineName, Environment.UserName, "Setup", entry.LevelDisplayName, entry.TimeCreated.GetValueOrDefault(), entry.ProviderName, msg));
                 }
             }
         }
 
-        static void WriteLogToStream(EventLog log, StreamWriter sw, DateTime dt)
+        static void AddStandardLogToList(EventLog log, List<ColomaEvent> list, DateTime dt)
         {
             WindowsVersion.WindowsVersionInfo wvi = new WindowsVersion.WindowsVersionInfo();
             WindowsVersion.GetWindowsBuildandRevision(wvi);
-
+            
             foreach (EventLogEntry entry in log.Entries)
             {
                 if (entry.TimeGenerated > dt)
@@ -150,7 +174,7 @@ namespace Coloma
                         (entry.EntryType == EventLogEntryType.Warning))
                     {
                         string msg = CleanUpMessage(entry.Message);
-                        sw.WriteLine("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\t{9}", wvi.branch, wvi.build.ToString(), wvi.revision.ToString(), entry.MachineName, Environment.UserName, log.LogDisplayName, entry.EntryType.ToString(), entry.TimeGenerated.ToString(), entry.Source, msg);
+                        list.Add(new ColomaEvent(wvi.branch, wvi.build, wvi.revision, entry.MachineName, Environment.UserName, log.LogDisplayName, entry.EntryType.ToString(), entry.TimeGenerated, entry.Source, msg));
                     }
                 }
             }

@@ -88,62 +88,13 @@ namespace Coloma
 
     public class KBRevision
     {
-        private uint build;
-        private uint revision;
-        private string kb;
-        private DateTime installdate;
+        public uint Build { get; set; }
 
-        public uint Build
-        {
-            get
-            {
-                return build;
-            }
+        public uint Revision { get; set; }
 
-            set
-            {
-                build = value;
-            }
-        }
+        public string Kb { get; set; }
 
-        public uint Revision
-        {
-            get
-            {
-                return revision;
-            }
-
-            set
-            {
-                revision = value;
-            }
-        }
-
-        public string Kb
-        {
-            get
-            {
-                return kb;
-            }
-
-            set
-            {
-                kb = value;
-            }
-        }
-
-        public DateTime Installdate
-        {
-            get
-            {
-                return installdate;
-            }
-
-            set
-            {
-                installdate = value;
-            }
-        }
+        public DateTime Installdate { get; set; }
 
         public KBRevision(uint b, uint r, string k)
         {

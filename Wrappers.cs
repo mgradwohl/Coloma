@@ -77,6 +77,14 @@ namespace Coloma
             ret = string.Format("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\t{9}", branch, build.ToString(), revision.ToString(), machineName, userName, logname, level, timeCreated.ToString(), source, message);
             return ret;
         }
+
+        public static string Header()
+        {
+            string ret = "Coloma Headers";
+            ret = string.Format("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\t{9}", nameof(branch), nameof(build), nameof(revision), nameof(machineName), nameof(userName), nameof(logname), nameof(level), nameof(timeCreated), nameof(source), nameof(message));
+            return ret;
+        }
+
     }
 
     public class KBRevision

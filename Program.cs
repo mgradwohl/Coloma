@@ -89,6 +89,7 @@ namespace Coloma
 
             Console.Write("Writing file");
             int i = 0;
+            sw.WriteLine(ColomaEvent.Header());
             foreach (ColomaEvent evt in eventlist)
             {
                 i++;

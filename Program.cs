@@ -107,7 +107,7 @@ namespace Coloma
 
             Console.WriteLine();
             Console.WriteLine("Done, thank you. Hit any key to exit");
-            Console.ReadLine();
+            Console.ReadKey(true);
         }
 
         private static void SortandFix(List<ColomaEvent> eventlist)

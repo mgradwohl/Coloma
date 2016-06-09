@@ -28,16 +28,17 @@ namespace Coloma
             Console.WriteLine();
 
             // create the file on the network share, unless it's unavailable, then use the desktop
-            string filename = @"\\iefs\users\mattgr\Coloma" + "\\Coloma" + "_" + Environment.MachineName + "_" + Environment.UserName + "_" + Environment.TickCount.ToString() + ".csv";
+            string filename = Environment.MachineName + "_" + Environment.UserName + "_" + Environment.TickCount.ToString() + ".tsv";
+            string filepath = @"\\iefs\users\mattgr\Coloma" + "\\Coloma" + "_" + filename;
             StreamWriter sw;
             try
             {
-                sw = new StreamWriter(filename, false, System.Text.Encoding.UTF8);
+                sw = new StreamWriter(filepath, false, System.Text.Encoding.UTF8);
             }
             catch (Exception)
             {
-                filename = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + "\\Coloma" + "_" + Environment.MachineName + "_" + Environment.UserName + "_" + Environment.TickCount.ToString() + ".csv";
-                sw = new StreamWriter(filename, false, System.Text.Encoding.UTF8);
+                filepath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + "\\Coloma" + "_" + filename;
+                sw = new StreamWriter(filepath, false, System.Text.Encoding.UTF8);
             }
 
             // just get logs for 3/1/2016 and after
@@ -46,23 +47,25 @@ namespace Coloma
             // Tell the user what we're doing
             Console.WriteLine("Any error, warning, or KB install written after " + dt.ToShortDateString());
             Console.WriteLine("From the following logs: system, security, hardwareevents, setup, and application");
-            Console.WriteLine("Data will be saved to " + filename);
+            Console.WriteLine("Data will be saved to " + filepath);
             Console.WriteLine();
 
             Console.Write("KB Articles... ");
-            List<KBRevision> kbrlist = new List<KBRevision>();
-            kbrlist.Add(new KBRevision(10586, 318, "KB3156421"));
-            kbrlist.Add(new KBRevision(10586, 218, "KB3147458"));
-            kbrlist.Add(new KBRevision(10586, 164, "KB3140768"));
-            kbrlist.Add(new KBRevision(10586, 122, "KB3140743"));
-            kbrlist.Add(new KBRevision(10586, 104, "KB3135173"));
-            kbrlist.Add(new KBRevision(10586, 71, "KB3124262"));
-            kbrlist.Add(new KBRevision(10586, 63, "KB3124263"));
-            kbrlist.Add(new KBRevision(10586, 36, "KB3124200"));
-            kbrlist.Add(new KBRevision(10586, 29, "KB3116900"));
-            kbrlist.Add(new KBRevision(10586, 17, "KB3116908"));
-            kbrlist.Add(new KBRevision(10586, 14, "KB3120677"));
-            kbrlist.Add(new KBRevision(10586, 11, "KB3118754"));
+            List<KBRevision> kbrlist = new List<KBRevision>
+            {
+                new KBRevision(10586, 318, "KB3156421"),
+                new KBRevision(10586, 218, "KB3147458"),
+                new KBRevision(10586, 164, "KB3140768"),
+                new KBRevision(10586, 122, "KB3140743"),
+                new KBRevision(10586, 104, "KB3135173"),
+                new KBRevision(10586, 71, "KB3124262"),
+                new KBRevision(10586, 63, "KB3124263"),
+                new KBRevision(10586, 36, "KB3124200"),
+                new KBRevision(10586, 29, "KB3116900"),
+                new KBRevision(10586, 17, "KB3116908"),
+                new KBRevision(10586, 14, "KB3120677"),
+                new KBRevision(10586, 11, "KB3118754")
+            };
             Console.WriteLine("done");
 
             List<ColomaEvent> eventlist = new List<ColomaEvent>();

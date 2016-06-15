@@ -17,7 +17,7 @@ namespace Coloma
                 Console.WriteLine("Coloma requires Windows 10");
                 Console.WriteLine();
                 Console.WriteLine("Hit any key to exit");
-                Console.ReadLine();
+                Console.ReadKey(true);
 
                 return;
             }
@@ -50,9 +50,11 @@ namespace Coloma
             Console.WriteLine("Data will be saved to " + filepath);
             Console.WriteLine();
 
-            Console.Write("KB Articles... ");
+            Console.Write("KB Articles for revision install history... ");
+            // TH2 revisions
             List<KBRevision> kbrlist = new List<KBRevision>
             {
+                new KBRevision(10586, 420, "KB3163018"),
                 new KBRevision(10586, 318, "KB3156421"),
                 new KBRevision(10586, 218, "KB3147458"),
                 new KBRevision(10586, 164, "KB3140768"),
@@ -70,12 +72,12 @@ namespace Coloma
 
             List<ColomaEvent> eventlist = new List<ColomaEvent>();
 
+            // Setup logs are different than other logs
             Console.Write("Setup... ");
-            // this will also fill in the list of revisions so we know when a build was updated
-            AddSetupLogToList(kbrlist, eventlist, dt);
+            bool setuplog = AddSetupLogToList(kbrlist, eventlist, dt);
             Console.WriteLine("done");
 
-            // one log at a time
+            // Go through the 'standard' logs
             string[] Logs = { "System", "HardwareEvents", "Application", "Security" };
             foreach (string log in Logs)
             {
@@ -86,8 +88,10 @@ namespace Coloma
                 Console.WriteLine("done");
             }
 
+            // gets all the events in order, and uses info from the setup log to ensure the correct revision
+            // if the setuplog had no entries, then use the current build and revision
             Console.Write("Sort and fixup... ");
-            SortandFix(eventlist);
+            SortandFix(eventlist, setuplog);
             Console.WriteLine("done");
 
             Console.Write("Writing file");
@@ -110,11 +114,19 @@ namespace Coloma
             Console.ReadKey(true);
         }
 
-        private static void SortandFix(List<ColomaEvent> eventlist)
+        private static void SortandFix(List<ColomaEvent> eventlist, bool setuplog)
         {
+            uint r = 11;
+            if (!setuplog)
+            {
+                WindowsVersion.WindowsVersionInfo wvi = new WindowsVersion.WindowsVersionInfo();
+                WindowsVersion.GetWindowsBuildandRevision(wvi);
+                r = wvi.revision;
+            }
+
             // sort the list by date
             eventlist.Sort();
-            uint r = 11;
+
             foreach (ColomaEvent evt in eventlist)
             {
                 if (evt.Logname == "Setup")
@@ -128,12 +140,13 @@ namespace Coloma
             }
         }
 
-        static void AddSetupLogToList(List<KBRevision> kbrlist, List<ColomaEvent> list, DateTime dt)
+        static bool AddSetupLogToList(List<KBRevision> kbrlist, List<ColomaEvent> list, DateTime dt)
         {
             // this retrieves the build.revision and branch for the current client
             WindowsVersion.WindowsVersionInfo wvi = new WindowsVersion.WindowsVersionInfo();
             WindowsVersion.GetWindowsBuildandRevision(wvi);
             uint revision = wvi.revision;
+            bool setuplog = false;
 
             EventLogQuery query = new EventLogQuery("Setup", PathType.LogName);
             query.ReverseDirection = false;
@@ -151,9 +164,10 @@ namespace Coloma
 
                     if (entry.Id == 2)
                     {
-                        // this is a KB installed message, figure out which KB it is and update the revision
+                        // this is a KB installed message, figure out which KB it is and update the revision of that entry
                         string kb = "KB";
                         int i = msg.IndexOf(kb);
+                        setuplog = true;
 
                         if (-1 != i)
                         {
@@ -172,6 +186,7 @@ namespace Coloma
                     list.Add(new ColomaEvent(wvi.branch, wvi.build, revision, entry.MachineName, Environment.UserName, "Setup", entry.LevelDisplayName, entry.TimeCreated.GetValueOrDefault(), entry.ProviderName, msg));
                 }
             }
+            return setuplog;
         }
 
         static void AddStandardLogToList(EventLog log, List<ColomaEvent> list, DateTime dt)

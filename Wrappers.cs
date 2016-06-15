@@ -43,10 +43,23 @@ namespace Coloma
             }
         }
 
+        public uint Build
+        {
+            get
+            {
+                return build;
+            }
+
+            set
+            {
+                build = value;
+            }
+        }
+
         public ColomaEvent(string branch, uint build, uint revision, string machineName, string userName, string logName, string level, DateTime timeCreated, string source, string Message)
         {
             this.branch = branch;
-            this.build = build;
+            this.Build = build;
             this.Revision = revision;
             this.machineName = machineName;
             this.userName = userName;
@@ -74,13 +87,13 @@ namespace Coloma
 
         public override string ToString()
         {
-            string ret = string.Join("\t", branch, build.ToString(), revision.ToString(), machineName, userName, logname, level, timeCreated.ToString(), source, message);
+            string ret = string.Join("\t", branch, Build.ToString(), revision.ToString(), machineName, userName, logname, level, timeCreated.ToString(), source, message);
             return ret;
         }
 
         public static string Header()
         {
-            string ret = string.Join("\t", nameof(branch), nameof(build), nameof(revision), nameof(machineName), nameof(userName), nameof(logname), nameof(level), nameof(timeCreated), nameof(source), nameof(message));
+            string ret = string.Join("\t", nameof(branch), nameof(Build), nameof(revision), nameof(machineName), nameof(userName), nameof(logname), nameof(level), nameof(timeCreated), nameof(source), nameof(message));
             return ret;
         }
 

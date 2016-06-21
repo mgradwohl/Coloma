@@ -183,7 +183,7 @@ namespace Coloma
                             }
                         }
                     }
-                    list.Add(new ColomaEvent(wvi.branch, wvi.build, revision, entry.MachineName, Environment.UserName, "Setup", entry.LevelDisplayName, entry.TimeCreated.GetValueOrDefault(), entry.ProviderName, msg));
+                    list.Add(new ColomaEvent(wvi.branch, wvi.build, revision, entry.MachineName, Environment.UserName, "Setup", entry.LevelDisplayName, entry.Id, entry.TimeCreated.GetValueOrDefault(), entry.ProviderName, msg));
                 }
             }
             return setuplog;
@@ -202,7 +202,7 @@ namespace Coloma
                         (entry.EntryType == EventLogEntryType.Warning))
                     {
                         string msg = CleanUpMessage(entry.Message);
-                        list.Add(new ColomaEvent(wvi.branch, wvi.build, 0, entry.MachineName, Environment.UserName, log.LogDisplayName, entry.EntryType.ToString(), entry.TimeGenerated, entry.Source, msg));
+                        list.Add(new ColomaEvent(wvi.branch, wvi.build, 0, entry.MachineName, Environment.UserName, log.LogDisplayName, entry.EntryType.ToString(), entry.InstanceId, entry.TimeGenerated, entry.Source, msg));
                     }
                 }
             }

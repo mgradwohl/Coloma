@@ -13,6 +13,7 @@ namespace Coloma
         private string machineName;
         private string userName;
         private string logname;
+        private long instanceid;
         private DateTime timeCreated;
         private string source;
         private string message;
@@ -55,8 +56,29 @@ namespace Coloma
                 build = value;
             }
         }
-
-        public ColomaEvent(string branch, uint build, uint revision, string machineName, string userName, string logName, string level, DateTime timeCreated, string source, string Message)
+        ////list.Add(new ColomaEvent(
+        //wvi.branch,
+        //wvi.build,
+        //    0,
+        //    entry.MachineName,
+        //    Environment.UserName,
+        //    log.LogDisplayName,
+        //    entry.EntryType.ToString(),
+        //    entry.InstanceId,
+        //    entry.TimeGenerated,
+        //    entry.Source,
+        //    msg));
+        public ColomaEvent( string branch,
+                            uint build,
+                            uint revision,
+                            string machineName,
+                            string userName,
+                            string logName,
+                            string level,
+                            long id,
+                            DateTime timeCreated,
+                            string source,
+                            string Message)
         {
             this.branch = branch;
             this.Build = build;
@@ -68,6 +90,7 @@ namespace Coloma
             this.timeCreated = timeCreated;
             this.source = source;
             this.message = Message;
+            this.instanceid = id;
         }
 
         public int CompareTo(object obj)
@@ -87,13 +110,13 @@ namespace Coloma
 
         public override string ToString()
         {
-            string ret = string.Join("\t", branch, Build.ToString(), revision.ToString(), machineName, userName, logname, level, timeCreated.ToString(), source, message);
+            string ret = string.Join("\t", branch, Build.ToString(), revision.ToString(), machineName, userName, logname, level, instanceid.ToString(), timeCreated.ToString(), source, message);
             return ret;
         }
 
         public static string Header()
         {
-            string ret = string.Join("\t", nameof(branch), nameof(Build), nameof(revision), nameof(machineName), nameof(userName), nameof(logname), nameof(level), nameof(timeCreated), nameof(source), nameof(message));
+            string ret = string.Join("\t", nameof(branch), nameof(Build), nameof(revision), nameof(machineName), nameof(userName), nameof(logname), nameof(level), nameof(instanceid), nameof(timeCreated), nameof(source), nameof(message));
             return ret;
         }
 

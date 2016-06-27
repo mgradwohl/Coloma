@@ -46,7 +46,7 @@ namespace Coloma
 
             // Tell the user what we're doing
             Console.WriteLine("Any error, warning, or KB install written after " + dt.ToShortDateString());
-            Console.WriteLine("From the following logs: system, security, hardwareevents, setup, and application");
+            Console.WriteLine("From the following logs: System, Security, Hardware Events, Setup, and Application");
             Console.WriteLine("Data will be saved to " + filepath);
             Console.WriteLine();
 

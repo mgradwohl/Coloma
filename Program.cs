@@ -213,6 +213,7 @@ namespace Coloma
             string msg = message.Replace("\t", " ");
             msg = msg.Replace("\r\n", "<br>");
             msg = msg.Replace("\n", "<br>");
+            msg = msg.Replace("\r", "<br>");
             msg = msg.Replace("<br><br>", "<br>");
 
             return msg;

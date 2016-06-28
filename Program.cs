@@ -44,7 +44,7 @@ namespace Coloma
 
             // just get logs since last time OR since 4/1/2016
             DateTime dt = new DateTime(2016, 4, 1, 0, 0, 0, 0, DateTimeKind.Local);
-            GetLastColomaDate(dt);
+            GetLastColomaDate(ref dt);
 
             // Tell the user what we're doing
             Console.WriteLine("Any error, warning, or KB install written after " + dt.ToShortDateString());
@@ -221,7 +221,7 @@ namespace Coloma
             return msg;
         }
 
-        public static void GetLastColomaDate(DateTime dtLastDate)
+        public static void GetLastColomaDate(ref DateTime dtLastDate)
         {
             const string keyName = "SOFTWARE\\Coloma";
             const string valueName = "LastLogDate";
@@ -230,8 +230,8 @@ namespace Coloma
 
             try
             {
-                long dtl = (long)rk.GetValue(valueName, dtLastDate.ToBinary(), RegistryValueOptions.DoNotExpandEnvironmentNames);
-                DateTime dt = DateTime.FromBinary(dtl);
+                long dtl = (long)rk.GetValue(valueName, dtLastDate.ToBinary());
+                dtLastDate = DateTime.FromBinary(dtl);
             }
             catch (ArgumentException)
             {

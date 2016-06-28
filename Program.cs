@@ -204,7 +204,7 @@ namespace Coloma
                         (entry.EntryType == EventLogEntryType.Warning))
                     {
                         string msg = CleanUpMessage(entry.Message);
-                        list.Add(new ColomaEvent(wvi.branch, wvi.build, 0, entry.MachineName, Environment.UserName, log.LogDisplayName, entry.EntryType.ToString(), entry.InstanceId, entry.TimeGenerated, entry.Source, msg));
+                        list.Add(new ColomaEvent(wvi.branch, wvi.build, 0, entry.MachineName, Environment.UserName, log.Log/*.LogDisplayName*/, entry.EntryType.ToString(), entry.InstanceId, entry.TimeGenerated, entry.Source, msg));
                     }
                 }
             }

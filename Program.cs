@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Eventing.Reader;
 using System.IO;
+using Microsoft.Win32;
 
 namespace Coloma
 {
@@ -41,8 +42,9 @@ namespace Coloma
                 sw = new StreamWriter(filepath, false, System.Text.Encoding.UTF8);
             }
 
-            // just get logs for 3/1/2016 and after
-            DateTime dt = new DateTime(2016, 3, 1, 0, 0, 0, 0, DateTimeKind.Local);
+            // just get logs since last time OR since 4/1/2016
+            DateTime dt = new DateTime(2016, 4, 1, 0, 0, 0, 0, DateTimeKind.Local);
+            GetLastColomaDate(dt);
 
             // Tell the user what we're doing
             Console.WriteLine("Any error, warning, or KB install written after " + dt.ToShortDateString());
@@ -217,6 +219,32 @@ namespace Coloma
             msg = msg.Replace("<br><br>", "<br>");
 
             return msg;
+        }
+
+        public static void GetLastColomaDate(DateTime dtLastDate)
+        {
+            const string keyName = "SOFTWARE\\Coloma";
+            const string valueName = "LastLogDate";
+
+            RegistryKey rk = Registry.CurrentUser.CreateSubKey(keyName, true);
+
+            try
+            {
+                long dtl = (long)rk.GetValue(valueName, dtLastDate.ToBinary(), RegistryValueOptions.DoNotExpandEnvironmentNames);
+                DateTime dt = DateTime.FromBinary(dtl);
+            }
+            catch (ArgumentException)
+            {
+                // ArgumentException is thrown if the key does not exist. In
+                // this case, there is no reason to display a message.
+            }
+
+            rk.SetValue(valueName, DateTime.Now.ToBinary(), RegistryValueKind.QWord);
+
+            if (rk != null)
+            {
+                rk.Close();
+            }
         }
     }
 }

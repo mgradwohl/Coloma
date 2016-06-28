@@ -141,6 +141,7 @@ namespace Coloma
         }
     }
 
+
     public class WindowsVersion
     {
         // https://osgwiki.com/wiki/OS_Versioning_Identifiers_for_Servicing

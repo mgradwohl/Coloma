@@ -3,12 +3,16 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Eventing.Reader;
 using System.IO;
+using System.Text.RegularExpressions;
 using Microsoft.Win32;
 
 namespace Coloma
 {
     class Program
     {
+        // Just load deviceId once, it's independant of other operations.
+        private static readonly string DeviceId = GetDeviceId();
+
         static void Main(string[] args)
         {
             // bail out if the user isn't running Windows 10
@@ -25,7 +29,11 @@ namespace Coloma
 
             // Inform the user we're running
             Console.WriteLine();
-            Console.WriteLine("Coloma is gathering log entries");
+            Console.WriteLine("Coloma is gathering log entries for your machine.");
+            if (DeviceId.Contains("UNKNOWN"))
+            {
+                Console.WriteLine("WARNING: Coloma could not automatically detect your DeviceID.");
+            }
             Console.WriteLine();
 
             // create the file on the network share, unless it's unavailable, then use the desktop
@@ -142,7 +150,7 @@ namespace Coloma
             }
         }
 
-        static bool AddSetupLogToList(List<KBRevision> kbrlist, List<ColomaEvent> list, DateTime dt)
+        private static bool AddSetupLogToList(List<KBRevision> kbrlist, List<ColomaEvent> list, DateTime dt)
         {
             // this retrieves the build.revision and branch for the current client
             WindowsVersion.WindowsVersionInfo wvi = new WindowsVersion.WindowsVersionInfo();
@@ -185,13 +193,15 @@ namespace Coloma
                             }
                         }
                     }
-                    list.Add(new ColomaEvent(wvi.branch, wvi.build, revision, entry.MachineName, Environment.UserName, "Setup", entry.LevelDisplayName, entry.Id, entry.TimeCreated.GetValueOrDefault(), entry.ProviderName, msg));
+                    list.Add(new ColomaEvent(wvi.branch, wvi.build, revision, entry.MachineName, DeviceId,
+                                             Environment.UserName, "Setup", entry.LevelDisplayName, entry.Id,
+                                             entry.TimeCreated.GetValueOrDefault(), entry.ProviderName, msg));
                 }
             }
             return setuplog;
         }
 
-        static void AddStandardLogToList(EventLog log, List<ColomaEvent> list, DateTime dt)
+        private static void AddStandardLogToList(EventLog log, List<ColomaEvent> list, DateTime dt)
         {
             WindowsVersion.WindowsVersionInfo wvi = new WindowsVersion.WindowsVersionInfo();
             WindowsVersion.GetWindowsBuildandRevision(wvi);
@@ -204,13 +214,15 @@ namespace Coloma
                         (entry.EntryType == EventLogEntryType.Warning))
                     {
                         string msg = CleanUpMessage(entry.Message);
-                        list.Add(new ColomaEvent(wvi.branch, wvi.build, 0, entry.MachineName, Environment.UserName, log.Log/*.LogDisplayName*/, entry.EntryType.ToString(), entry.InstanceId, entry.TimeGenerated, entry.Source, msg));
+                        list.Add(new ColomaEvent(wvi.branch, wvi.build, 0, entry.MachineName, DeviceId,
+                                 Environment.UserName, log.Log/*.LogDisplayName*/, entry.EntryType.ToString(),
+                                 entry.InstanceId, entry.TimeGenerated, entry.Source, msg));
                     }
                 }
             }
         }
 
-        static string CleanUpMessage(string message)
+        private static string CleanUpMessage(string message)
         {
             string msg = message.Replace("\t", " ");
             msg = msg.Replace("\r\n", "<br>");
@@ -221,7 +233,7 @@ namespace Coloma
             return msg;
         }
 
-        public static void GetLastColomaDate(ref DateTime dtLastDate)
+        private static void GetLastColomaDate(ref DateTime dtLastDate)
         {
             const string keyName = "SOFTWARE\\Coloma";
             const string valueName = "LastLogDate";
@@ -245,6 +257,41 @@ namespace Coloma
             {
                 rk.Close();
             }
+        }
+
+        // Attempts to retrieve the deviceID from the registry
+        private static string GetDeviceId()
+        {
+            const string keyName =
+                "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Diagnostics\\DiagTrack\\SettingsRequests\\CFC.FLIGHTS";
+
+            const string valueName = @"ETagQueryParameters";
+
+            RegistryKey rk = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
+            rk = rk.OpenSubKey(keyName);
+
+            // We need to see if the key exists or contains what we need.
+            if (rk != null)
+            {
+                string keyData = (string)rk.GetValue(valueName);
+
+                if (keyData.Contains("deviceId"))
+                {
+                    // I'm not sure of deviceID's form, so to be safer instead of using substring, I will use regex.
+                    // deviceId=s:57D3C3B8-F144-4E2D-8443-3BF3D95CB5DA&
+                    var regex = new Regex(@"deviceId=(.*?)&");
+
+                    // See if we matched anything
+                    if (regex.IsMatch(keyData))
+                    {
+                        // Send back the deviceId
+                        return regex.Match(keyData).Groups[1].Value;
+                    }
+                }
+            }
+
+            // If we fell out of the any of the above, deviceID is unknown
+            return "s:UNKNOWN";
         }
     }
 }

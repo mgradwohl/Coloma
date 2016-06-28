@@ -7,71 +7,26 @@ namespace Coloma
     public class ColomaEvent : IComparable
     {
         private string branch;
-        private uint build;
-        private uint revision;
-        string level;
+        private string level;
         private string machineName;
+        private string deviceId;
         private string userName;
-        private string logname;
         private long instanceid;
         private DateTime timeCreated;
         private string source;
         private string message;
 
-        public uint Revision
-        {
-            get
-            {
-                return revision;
-            }
+        public uint Revision { get; set; }
 
-            set
-            {
-                revision = value;
-            }
-        }
+        public string Logname { get; set; }
 
-        public string Logname
-        {
-            get
-            {
-                return logname;
-            }
+        public uint Build { get; set; }
 
-            set
-            {
-                logname = value;
-            }
-        }
-
-        public uint Build
-        {
-            get
-            {
-                return build;
-            }
-
-            set
-            {
-                build = value;
-            }
-        }
-        ////list.Add(new ColomaEvent(
-        //wvi.branch,
-        //wvi.build,
-        //    0,
-        //    entry.MachineName,
-        //    Environment.UserName,
-        //    log.LogDisplayName,
-        //    entry.EntryType.ToString(),
-        //    entry.InstanceId,
-        //    entry.TimeGenerated,
-        //    entry.Source,
-        //    msg));
         public ColomaEvent( string branch,
                             uint build,
                             uint revision,
                             string machineName,
+                            string deviceId,
                             string userName,
                             string logName,
                             string level,
@@ -84,6 +39,7 @@ namespace Coloma
             this.Build = build;
             this.Revision = revision;
             this.machineName = machineName;
+            this.deviceId = deviceId;
             this.userName = userName;
             this.Logname = logName;
             this.level = level;
@@ -95,6 +51,8 @@ namespace Coloma
 
         public int CompareTo(object obj)
         {
+            if (obj == null) return 1;
+
             ColomaEvent eventToCompare = obj as ColomaEvent;
             if (eventToCompare.timeCreated < timeCreated)
             {
@@ -110,13 +68,16 @@ namespace Coloma
 
         public override string ToString()
         {
-            string ret = string.Join("\t", branch, Build.ToString(), revision.ToString(), machineName, userName, logname, level, instanceid.ToString(), timeCreated.ToString(), source, message);
+            string ret = string.Join("\t", branch, Build.ToString(), Revision.ToString(), machineName, deviceId,
+                                     userName, Logname, level, instanceid.ToString(), timeCreated.ToString(), source, message);
             return ret;
         }
 
         public static string Header()
         {
-            string ret = string.Join("\t", nameof(branch), nameof(Build), nameof(revision), nameof(machineName), nameof(userName), nameof(logname), nameof(level), nameof(instanceid), nameof(timeCreated), nameof(source), nameof(message));
+            string ret = string.Join("\t", nameof(branch), nameof(Build), nameof(Revision), nameof(machineName), nameof(deviceId),
+                                     nameof(userName), nameof(Logname), nameof(level), nameof(instanceid), nameof(timeCreated),
+                                     nameof(source), nameof(message));
             return ret;
         }
 
@@ -140,7 +101,6 @@ namespace Coloma
             Installdate = new DateTime();
         }
     }
-
 
     public class WindowsVersion
     {
@@ -183,7 +143,6 @@ namespace Coloma
                 // all these converts suck
                 wvi.build = Convert.ToUInt32(rk.GetValue("CurrentBuild").ToString());
                 wvi.revision = Convert.ToUInt32(rk.GetValue("UBR").ToString());
-
             }
             rk.Close();
         }

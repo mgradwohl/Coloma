@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reflection;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Eventing.Reader;
@@ -30,14 +31,10 @@ namespace Coloma
             // Inform the user we're running
             Console.WriteLine();
             Console.WriteLine("Coloma is gathering log entries for your machine.");
-            if (DeviceId.Contains("UNKNOWN"))
-            {
-                Console.WriteLine("WARNING: Coloma could not automatically detect your DeviceID.");
-            }
             Console.WriteLine();
 
             // create the file on the network share, unless it's unavailable, then use the desktop
-            string filename = Environment.MachineName + "_" + Environment.UserName + "_" + Environment.TickCount.ToString() + ".tsv";
+            string filename = Assembly.GetExecutingAssembly().GetName().Version.ToString() + "_" + Environment.MachineName + "_" + Environment.UserName + "_" + Environment.TickCount.ToString() + ".tsv";
             string filepath = @"\\iefs\users\mattgr\Coloma" + "\\Coloma" + "_" + filename;
             StreamWriter sw;
             try
@@ -48,6 +45,8 @@ namespace Coloma
             {
                 filepath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + "\\Coloma" + "_" + filename;
                 sw = new StreamWriter(filepath, false, System.Text.Encoding.UTF8);
+
+                Console.WriteLine("Coloma could not access the network share and will write the .tsv to your desktop.");
             }
 
             // just get logs since last time OR since 4/1/2016
@@ -58,6 +57,12 @@ namespace Coloma
             Console.WriteLine("Any error, warning, or KB install written after " + dt.ToShortDateString());
             Console.WriteLine("From the following logs: System, Security, Hardware Events, Setup, and Application");
             Console.WriteLine("Data will be saved to " + filepath);
+
+            if (DeviceId.Contains("UNKNOWN"))
+            {
+                Console.WriteLine("WARNING: Coloma could not automatically detect your DeviceID.");
+            }
+
             Console.WriteLine();
 
             Console.Write("KB Articles for revision install history... ");

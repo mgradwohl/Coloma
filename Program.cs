@@ -14,7 +14,7 @@ namespace Coloma
         // Just load deviceId once, it's independant of other operations.
         private static readonly string DeviceId = GetDeviceId();
 
-        static void Main(string[] args)
+        static void Main()
         {
             // bail out if the user isn't running Windows 10
             if (Environment.OSVersion.Version.Major < 10)
@@ -267,10 +267,11 @@ namespace Coloma
         // Attempts to retrieve the deviceID from the registry
         private static string GetDeviceId()
         {
-            const string keyName =
+            // First try CFC FLIGHTS, we have a backup key we can try if this doesn't work out.
+            string keyName =
                 "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Diagnostics\\DiagTrack\\SettingsRequests\\CFC.FLIGHTS";
 
-            const string valueName = @"ETagQueryParameters";
+            string valueName = @"ETagQueryParameters";
 
             RegistryKey rk = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
             rk = rk.OpenSubKey(keyName);
@@ -295,7 +296,31 @@ namespace Coloma
                 }
             }
 
-            // If we fell out of the any of the above, deviceID is unknown
+            // CFC FLIGHTS did not work, try SQMCLient.
+            keyName = "SOFTWARE\\Microsoft\\SQMClient";
+            valueName = @"MachineId";
+
+            rk = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
+            rk = rk.OpenSubKey(keyName);
+
+            // We need to see if the key exists or contains what we need.
+            if (rk != null)
+            {
+                string keyData = (string)rk.GetValue(valueName);
+
+                // This key holds IDs in the form {XXXX-XXXX-XXXX-XXXX}
+                // We need to remove the braces and add s: to the front.
+                if (keyData.Contains("{") && keyData.Contains("}"))
+                {
+                    keyData = keyData.Replace("{", String.Empty);
+                    keyData = keyData.Replace("}", String.Empty);
+
+                    keyData = "s:" + keyData;
+                    return keyData;
+                }
+            }
+
+            // If we reach this point, deviceID is unknown
             return "s:UNKNOWN";
         }
     }

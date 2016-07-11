@@ -8,38 +8,51 @@ namespace ColomaAnalysis
     {
         static void Main(string[] args)
         {
+            DateTime start = DateTime.Now;
             string folderPath = @"\\iefs\users\mattgr\Coloma\";
             string filepath = @"\\iefs\users\mattgr\Coloma\Analysis\";
             bool first = true;
             int filesFailed = 0, filesSucceeded = 0;
             var files = Directory.EnumerateFiles(folderPath, "*.tsv").ToArray();
+            var output = File.Create($"{filepath}dataset.tsv");
+
+            bool firstFile = true; // Only keep the header from the first file.
             foreach (string file in files)
             {
                 ReadFileLogToConsole(file);
-                string[] lines;
-                try
+
+                var input = File.OpenRead(file);
+
+                // If we aren't the first file, throw away the header
+                if (firstFile == false)
                 {
-                    lines = File.ReadAllLines(file);
-                    filesSucceeded++;
+                    string header =
+                        "branch	Build	Revision	machineName	deviceId	userName	Logname	level	instanceid	timeCreated	source	message\r\n";
+                    
+                    // Need to seek 3 more bytes, because the files are UTF-8 meaning they have a 3 byte header.
+                    input.Seek(header.Length + 3, SeekOrigin.Current);
+
                 }
-                catch (IOException)
+                else
                 {
-                    Console.WriteLine("Could not open the file, continuing without it");
-                    filesFailed++;
-                    continue;
+                    firstFile = false;
                 }
+
+                var buffer = new byte[1024];
+                int bytesRead;
+                while ((bytesRead = input.Read(buffer, 0, buffer.Length)) > 0)
+                {
+                    output.Write(buffer, 0, bytesRead);
+                }
+                filesSucceeded++;
+
                 WrittenFileLogToConsole(filesSucceeded, filesFailed, file, files.Count());
-                //TODO: Add to a buffer first and then write to the file for faster run time
-                //TODO: Delete the old file first, this will just append to the file forever if you don't delete it
                 //TODO: Maybe add a timestamp?
-                if (first)
-                {
-                    File.AppendAllLines($"{filepath}dataset.tsv", lines.ToArray());
-                    first = false;
-                }
-                File.AppendAllLines($"{filepath}dataset.tsv", lines.Skip(1).ToArray());
             }
 
+            output.Close();
+            TimeSpan timeTaken = DateTime.Now - start;
+            Console.WriteLine("Took " + timeTaken + "\n");
             Console.WriteLine();
             Console.WriteLine($"Files Succeeded: {filesSucceeded}");
             Console.WriteLine($"Files Failed: {filesFailed}");

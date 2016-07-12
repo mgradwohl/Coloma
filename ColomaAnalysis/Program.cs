@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 
 namespace ColomaAnalysis
 {
     class Program
-    { 
+    {
         static void Main(string[] args)
         {
             // Configure this so that only TSVs from our current data schema version are aggregated

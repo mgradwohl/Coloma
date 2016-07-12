@@ -13,10 +13,10 @@ namespace ColomaAnalysis
             string targetVersion = "1.0.0.1";
 
             // Configure this to output to the correct Analysis directory,
-            // NOTE: This will destroy other dataset.tsv files by default.
+            // NOTE: This will destroy dataset.tsv in the same directory if it exists.
             string filepath = @"\\iefs\users\mattgr\Coloma\Analysis";
 
-            // Configure this to point to the directly containing all the TSV files needing to be aggregated.
+            // Configure this to point to the directory containing all the TSV files needing to be aggregated.
             string folderPath = @"\\iefs\users\mattgr\Coloma\";
 
             DateTime start = DateTime.Now;

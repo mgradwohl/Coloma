@@ -5,12 +5,21 @@ using System.Linq;
 namespace ColomaAnalysis
 {
     class Program
-    {
+    { 
         static void Main(string[] args)
         {
-            DateTime start = DateTime.Now;
+            // Configure this so that only TSVs from our current data schema version are aggregated
+            // Aggregating TSVs from unsupported versions results in malformed CSVs where some rows will be shifted
+            string targetVersion = "1.0.0.1";
+
+            // Configure this to output to the correct Analysis directory,
+            // NOTE: This will destroy other dataset.tsv files by default.
+            string filepath = @"\\iefs\users\mattgr\Coloma\Analysis";
+
+            // Configure this to point to the directly containing all the TSV files needing to be aggregated.
             string folderPath = @"\\iefs\users\mattgr\Coloma\";
-            string filepath = @"\\iefs\users\mattgr\Coloma\Analysis\";
+
+            DateTime start = DateTime.Now;
             bool first = true;
             int filesFailed = 0, filesSucceeded = 0;
             var files = Directory.EnumerateFiles(folderPath, "*.tsv").ToArray();
@@ -19,6 +28,14 @@ namespace ColomaAnalysis
             bool firstFile = true; // Only keep the header from the first file.
             foreach (string file in files)
             {
+                // The TSV must exactly contain our targetVersion or else skip it.
+                if (!file.Contains(targetVersion))
+                {
+                    filesSucceeded++;
+                    SkippedFileLogToConsole(filesSucceeded, filesFailed, file, files.Count(), "File version invalid.");
+                    continue;
+                }
+
                 ReadFileLogToConsole(file);
 
                 var input = File.OpenRead(file);
@@ -77,6 +94,21 @@ namespace ColomaAnalysis
             Console.Write($" {filesFailed}");
             Console.ForegroundColor = ConsoleColor.White;
             Console.WriteLine($"] Writing {file}");
+            Console.ForegroundColor = ConsoleColor.DarkCyan;
+            Console.WriteLine($"Files remaining: {fileCount - (filesSucceeded + filesFailed)}");
+        }
+
+        private static void SkippedFileLogToConsole(int filesSucceeded, int filesFailed, string file, int fileCount, string reason = "")
+        {
+            Console.Write("[");
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.Write($"{filesSucceeded} ");
+            Console.ForegroundColor = ConsoleColor.White;
+            Console.Write("|");
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.Write($" {filesFailed}");
+            Console.ForegroundColor = ConsoleColor.White;
+            Console.WriteLine($"] Skipping {file}" + " : " + reason);
             Console.ForegroundColor = ConsoleColor.DarkCyan;
             Console.WriteLine($"Files remaining: {fileCount - (filesSucceeded + filesFailed)}");
         }

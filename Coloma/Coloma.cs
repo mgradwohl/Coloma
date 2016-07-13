@@ -9,7 +9,7 @@ using Microsoft.Win32;
 
 namespace Coloma
 {
-    class Program
+    public class Coloma
     {
         // Just load deviceId once, it's independant of other operations.
         private static readonly string DeviceId = GetDeviceId();

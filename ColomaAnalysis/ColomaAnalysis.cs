@@ -1,17 +1,28 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using Coloma;
 
 namespace ColomaAnalysis
 {
-    class Program
+    class ColomaAnalysis
     {
         static void Main(string[] args)
         {
-            DateTime start = DateTime.Now;
+            // This is the directory where TSVs are sourced.
             string folderPath = @"\\iefs\users\mattgr\Coloma\";
-            string filepath = @"\\iefs\users\mattgr\Coloma\Analysis\";
-            bool first = true;
+
+            // Get data schema version of Coloma.exe
+            // We use this assembly version to verify source TSVs are from the right version of Coloma.exe
+            string colomaAssemblyVersion = typeof(Coloma.Coloma).Assembly.GetName().Version.ToString();
+
+            // We also use the assembly version to output the aggregated TSV to the correct directory.
+            string filepath = @"\\iefs\users\mattgr\Coloma\Analysis_" + colomaAssemblyVersion + @"\";
+
+            // It is safe to directly call CreateDirectory to ensure the directory exists
+            Directory.CreateDirectory(filepath);
+
+            DateTime start = DateTime.Now;
             int filesFailed = 0, filesSucceeded = 0;
             var files = Directory.EnumerateFiles(folderPath, "*.tsv").ToArray();
             var output = File.Create($"{filepath}dataset.tsv");
@@ -19,6 +30,14 @@ namespace ColomaAnalysis
             bool firstFile = true; // Only keep the header from the first file.
             foreach (string file in files)
             {
+                // The TSV must exactly contain our targetVersion or else skip it.
+                if (!file.Contains(colomaAssemblyVersion))
+                {
+                    filesSucceeded++;
+                    SkippedFileLogToConsole(filesSucceeded, filesFailed, file, files.Count(), "File version invalid.");
+                    continue;
+                }
+
                 ReadFileLogToConsole(file);
 
                 var input = File.OpenRead(file);
@@ -77,6 +96,21 @@ namespace ColomaAnalysis
             Console.Write($" {filesFailed}");
             Console.ForegroundColor = ConsoleColor.White;
             Console.WriteLine($"] Writing {file}");
+            Console.ForegroundColor = ConsoleColor.DarkCyan;
+            Console.WriteLine($"Files remaining: {fileCount - (filesSucceeded + filesFailed)}");
+        }
+
+        private static void SkippedFileLogToConsole(int filesSucceeded, int filesFailed, string file, int fileCount, string reason = "")
+        {
+            Console.Write("[");
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.Write($"{filesSucceeded} ");
+            Console.ForegroundColor = ConsoleColor.White;
+            Console.Write("|");
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.Write($" {filesFailed}");
+            Console.ForegroundColor = ConsoleColor.White;
+            Console.WriteLine($"] Skipping {file}" + " : " + reason);
             Console.ForegroundColor = ConsoleColor.DarkCyan;
             Console.WriteLine($"Files remaining: {fileCount - (filesSucceeded + filesFailed)}");
         }

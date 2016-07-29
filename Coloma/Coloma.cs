@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Reflection;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Diagnostics.Eventing.Reader;
 using System.IO;
 using System.Linq;
@@ -32,7 +31,6 @@ namespace Coloma
             // Parse args
             var onlyNewEvents = !args.Contains("-all");
             var saveLocal = args.Contains("-local");
-            var hideWindow = args.Contains("-hidewindow");
 
             // Inform the user we're running
             Console.WriteLine();
@@ -101,17 +99,15 @@ namespace Coloma
 
             // Setup logs are different than other logs
             Console.Write("Setup... ");
-            bool setuplog = AddSetupLogToList(kbrlist, eventlist, dt);
+            bool setuplog = AddSetupLogToList(kbrlist, eventlist);
             Console.WriteLine("done");
 
             // Go through the 'standard' logs
             string[] Logs = { "System", "HardwareEvents", "Application", "Security" };
             foreach (string log in Logs)
             {
-                EventLog eventlog = new EventLog(log, ".");
                 Console.Write(log + "... ");
-                AddStandardLogToList(eventlog, eventlist, dt);
-                eventlog.Close();
+                AddLogToList(log, eventlist, dt);
                 Console.WriteLine("done");
             }
 
@@ -167,7 +163,7 @@ namespace Coloma
             }
         }
 
-        private static bool AddSetupLogToList(List<KBRevision> kbrlist, List<ColomaEvent> list, DateTime dt)
+        private static bool AddSetupLogToList(List<KBRevision> kbrlist, List<ColomaEvent> list)
         {
             // this retrieves the build.revision and branch for the current client
             WindowsVersion.WindowsVersionInfo wvi = new WindowsVersion.WindowsVersionInfo();
@@ -218,36 +214,69 @@ namespace Coloma
             return setuplog;
         }
 
-        private static void AddStandardLogToList(EventLog log, List<ColomaEvent> list, DateTime dt)
+        private static void AddLogToList(string logName, List<ColomaEvent> list, DateTime dt)
         {
+            // this retrieves the build.revision and branch for the current client
             WindowsVersion.WindowsVersionInfo wvi = new WindowsVersion.WindowsVersionInfo();
             WindowsVersion.GetWindowsBuildandRevision(wvi);
 
-            foreach (EventLogEntry entry in log.Entries)
+            EventLogQuery query = new EventLogQuery(logName, PathType.LogName);
+            query.ReverseDirection = false;
+            EventLogReader reader = new EventLogReader(query);
+
+            EventRecord entry;
+            while ((entry = reader.ReadEvent()) != null)
             {
-                if (entry.TimeGenerated > dt)
+                var entryTimeCreated = entry.TimeCreated ?? new DateTime();
+
+                if (entryTimeCreated < dt)
+                    continue;
+
+                if ((entry.Level != (byte) StandardEventLevel.Critical) &&
+                    (entry.Level != (byte) StandardEventLevel.Error) &&
+                    (entry.Level != (byte) StandardEventLevel.Warning)) continue;
+
+                var entryMachineName = entry.MachineName;
+                var entryLogName = entry.LogName;
+                var entryId = entry.Id;
+                var entryProviderName = entry.ProviderName;
+
+                string entryLevelDisplayName = "";
+                try
                 {
-                    if ((entry.EntryType == EventLogEntryType.Error) ||
-                        (entry.EntryType == EventLogEntryType.Warning))
-                    {
-                        string msg = CleanUpMessage(entry.Message);
-                        list.Add(new ColomaEvent(wvi.branch, wvi.build, 0, entry.MachineName, DeviceId,
-                                 Environment.UserName, log.Log/*.LogDisplayName*/, entry.EntryType.ToString(),
-                                 entry.InstanceId, entry.TimeGenerated, entry.Source, msg));
-                    }
+                    entryLevelDisplayName = entry.LevelDisplayName;
                 }
+                catch
+                {
+                    if (entry.Level != null) entryLevelDisplayName = ((StandardEventLevel) entry.Level).ToString();
+                }
+
+                string entryMessage = CleanUpMessage(entry.FormatDescription());
+                if (entryMessage == null && entry.Properties.Count > 0)
+                {
+                    string descNotFoundMsgTemplate = "The description for Event ID '{0}' in Source '{1}' cannot be found.  The local computer may not have the necessary registry information or message DLL files to display the message, or you may not have permission to access them.  The following information is part of the event:{2}";
+                    string entryProperties = String.Join(", ", entry.Properties.Select(p => String.Format("'{0}'", p.Value)));
+                    entryMessage = String.Format(descNotFoundMsgTemplate, entryId, entryProviderName, entryProperties);
+                }
+
+                list.Add(new ColomaEvent(wvi.branch, wvi.build, 0, entryMachineName, DeviceId,
+                    Environment.UserName, entryLogName, entryLevelDisplayName, entryId,
+                    entryTimeCreated, entryProviderName, entryMessage));
             }
         }
-
+        
         private static string CleanUpMessage(string message)
         {
-            string msg = message.Replace("\t", " ");
-            msg = msg.Replace("\r\n", "<br>");
-            msg = msg.Replace("\n", "<br>");
-            msg = msg.Replace("\r", "<br>");
-            msg = msg.Replace("<br><br>", "<br>");
+            if (message != null)
+            {
+                message = message.Replace("\t", " ");
+                message = message.Replace("\r\n", "<br>");
+                message = message.Replace("\n", "<br>");
+                message = message.Replace("\r", "<br>");
+                message = message.Replace("<br><br>", "<br>");
+            }
 
-            return msg;
+            return message;
         }
 
         private static void GetLastColomaDate(ref DateTime dtLastDate)

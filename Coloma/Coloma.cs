@@ -56,7 +56,9 @@ namespace Coloma
                     : "Coloma could not access the network share and will write the .tsv to your desktop.");
             }
 
-            // just get logs since last time OR since 4/1/2016
+            // If the old data was collected with the current Coloma version, then get logs since last time OR
+            // since 4/1/2016 if no data was collected before
+            // If the old data was collected with the old Coloma version, then get data since 4/1/2016  
             DateTime dt = new DateTime(2016, 4, 1, 0, 0, 0, 0, DateTimeKind.Local);
             if (onlyNewEvents)
             {
@@ -282,22 +284,29 @@ namespace Coloma
         private static void GetLastColomaDate(ref DateTime dtLastDate)
         {
             const string keyName = "SOFTWARE\\Coloma";
-            const string valueName = "LastLogDate";
+            const string dateValueName = "LastLogDate";
+            const string versionValueName = "Version";
 
             RegistryKey rk = Registry.CurrentUser.CreateSubKey(keyName, true);
 
-            try
+            string lastVersion = rk.GetValue(versionValueName)?.ToString();
+
+            if (lastVersion == Assembly.GetExecutingAssembly().GetName().Version.ToString())
             {
-                long dtl = (long)rk.GetValue(valueName, dtLastDate.ToBinary());
-                dtLastDate = DateTime.FromBinary(dtl);
-            }
-            catch (ArgumentException)
-            {
-                // ArgumentException is thrown if the key does not exist. In
-                // this case, there is no reason to display a message.
+                try
+                {
+                    long dtl = (long)rk.GetValue(dateValueName, dtLastDate.ToBinary());
+                    dtLastDate = DateTime.FromBinary(dtl);
+                }
+                catch (ArgumentException)
+                {
+                    // ArgumentException is thrown if the key does not exist. In
+                    // this case, there is no reason to display a message.
+                }
             }
 
-            rk.SetValue(valueName, DateTime.Now.ToBinary(), RegistryValueKind.QWord);
+            rk.SetValue(versionValueName, Assembly.GetExecutingAssembly().GetName().Version.ToString(), RegistryValueKind.String);
+            rk.SetValue(dateValueName, DateTime.Now.ToBinary(), RegistryValueKind.QWord);
 
             if (rk != null)
             {

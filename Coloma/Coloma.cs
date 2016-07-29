@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Eventing.Reader;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Microsoft.Win32;
 
@@ -14,7 +15,7 @@ namespace Coloma
         // Just load deviceId once, it's independant of other operations.
         private static readonly string DeviceId = GetDeviceId();
 
-        static void Main()
+        static void Main(string[] args)
         {
             // bail out if the user isn't running Windows 10
             if (Environment.OSVersion.Version.Major < 10)
@@ -28,6 +29,11 @@ namespace Coloma
                 return;
             }
 
+            // Parse args
+            var onlyNewEvents = !args.Contains("-all");
+            var saveLocal = args.Contains("-local");
+            var hideWindow = args.Contains("-hidewindow");
+
             // Inform the user we're running
             Console.WriteLine();
             Console.WriteLine("Coloma is gathering log entries for your machine.");
@@ -39,6 +45,7 @@ namespace Coloma
             StreamWriter sw;
             try
             {
+                if (saveLocal) throw new Exception();
                 sw = new StreamWriter(filepath, false, System.Text.Encoding.UTF8);
             }
             catch (Exception)
@@ -46,12 +53,17 @@ namespace Coloma
                 filepath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + "\\Coloma" + "_" + filename;
                 sw = new StreamWriter(filepath, false, System.Text.Encoding.UTF8);
 
-                Console.WriteLine("Coloma could not access the network share and will write the .tsv to your desktop.");
+                Console.WriteLine(saveLocal
+                    ? "Coloma will write the .tsv to your desktop."
+                    : "Coloma could not access the network share and will write the .tsv to your desktop.");
             }
 
             // just get logs since last time OR since 4/1/2016
             DateTime dt = new DateTime(2016, 4, 1, 0, 0, 0, 0, DateTimeKind.Local);
-            GetLastColomaDate(ref dt);
+            if (onlyNewEvents)
+            {
+                GetLastColomaDate(ref dt);
+            }
 
             // Tell the user what we're doing
             Console.WriteLine("Any error, warning, or KB install written after " + dt.ToShortDateString());

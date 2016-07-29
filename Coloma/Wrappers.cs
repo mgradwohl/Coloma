@@ -16,6 +16,18 @@ namespace Coloma
         private string source;
         private string message;
 
+        private Guid? entryActivityId;
+        private int? entryProcessId;
+        private int? entryThreadId;
+        private string entryProperties;
+        private int? entryQualifiers;
+        private long? entryRecordId;
+        private string entryUserId;
+        private byte? entryVersion;
+        private string entryKeywordsDisplayNames;
+        private string entryOpcodeDisplayName;
+        private string entryTaskDisplayName;
+
         public uint Revision { get; set; }
 
         public string Logname { get; set; }
@@ -33,7 +45,19 @@ namespace Coloma
                             long id,
                             DateTime timeCreated,
                             string source,
-                            string Message)
+                            string Message,
+
+                            Guid? entryActivityId,
+                            int? entryProcessId,
+                            int? entryThreadId,
+                            string entryProperties,
+                            int? entryQualifiers,
+                            long? entryRecordId,
+                            string entryUserId,
+                            byte? entryVersion,
+                            string entryKeywordsDisplayNames,
+                            string entryOpcodeDisplayName,
+                            string entryTaskDisplayName)
         {
             this.branch = branch;
             this.Build = build;
@@ -47,6 +71,18 @@ namespace Coloma
             this.source = source;
             this.message = Message;
             this.instanceid = id;
+
+            this.entryActivityId = entryActivityId;
+            this.entryProcessId = entryProcessId;
+            this.entryThreadId = entryThreadId;
+            this.entryProperties = entryProperties;
+            this.entryQualifiers = entryQualifiers;
+            this.entryRecordId = entryRecordId;
+            this.entryUserId = entryUserId;
+            this.entryVersion = entryVersion;
+            this.entryKeywordsDisplayNames = entryKeywordsDisplayNames;
+            this.entryOpcodeDisplayName = entryOpcodeDisplayName;
+            this.entryTaskDisplayName = entryTaskDisplayName;
         }
 
         public int CompareTo(object obj)
@@ -69,15 +105,18 @@ namespace Coloma
         public override string ToString()
         {
             string ret = string.Join("\t", branch, Build.ToString(), Revision.ToString(), machineName, deviceId,
-                                     userName, Logname, level, instanceid.ToString(), timeCreated.ToString(), source, message);
+                                     userName, Logname, level, instanceid.ToString(), timeCreated.ToString(), source, message, 
+                                     entryActivityId, entryProcessId, entryThreadId, entryProperties, entryQualifiers, entryRecordId, 
+                                     entryUserId, entryVersion, entryKeywordsDisplayNames, entryOpcodeDisplayName, entryTaskDisplayName);
             return ret;
         }
 
         public static string Header()
         {
             string ret = string.Join("\t", nameof(branch), nameof(Build), nameof(Revision), nameof(machineName), nameof(deviceId),
-                                     nameof(userName), nameof(Logname), nameof(level), nameof(instanceid), nameof(timeCreated),
-                                     nameof(source), nameof(message));
+                                     nameof(userName), nameof(Logname), nameof(level), nameof(instanceid), nameof(timeCreated), nameof(source), nameof(message),
+                                     nameof(entryActivityId), nameof(entryProcessId), nameof(entryThreadId), nameof(entryProperties), nameof(entryQualifiers), nameof(entryRecordId),
+                                     nameof(entryUserId), nameof(entryVersion), nameof(entryKeywordsDisplayNames), nameof(entryOpcodeDisplayName), nameof(entryTaskDisplayName));
             return ret;
         }
 

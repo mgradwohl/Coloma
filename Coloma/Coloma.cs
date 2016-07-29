@@ -99,11 +99,11 @@ namespace Coloma
 
             // Setup logs are different than other logs
             Console.Write("Setup... ");
-            bool setuplog = AddSetupLogToList(kbrlist, eventlist);
+            uint? revision = GetRevisionFromSetupLog(kbrlist);
             Console.WriteLine("done");
 
             // Go through the 'standard' logs
-            string[] Logs = { "System", "HardwareEvents", "Application", "Security" };
+            string[] Logs = { "System", "HardwareEvents", "Application", "Security", "Setup" };
             foreach (string log in Logs)
             {
                 Console.Write(log + "... ");
@@ -114,7 +114,7 @@ namespace Coloma
             // gets all the events in order, and uses info from the setup log to ensure the correct revision
             // if the setuplog had no entries, then use the current build and revision
             Console.Write("Sort and fixup... ");
-            SortandFix(eventlist, setuplog);
+            SortandFix(eventlist, revision);
             Console.WriteLine("done");
 
             Console.Write("Writing file");
@@ -137,10 +137,14 @@ namespace Coloma
             Console.ReadKey(true);
         }
 
-        private static void SortandFix(List<ColomaEvent> eventlist, bool setuplog)
+        private static void SortandFix(List<ColomaEvent> eventlist, uint? revision)
         {
             uint r = 11;
-            if (!setuplog)
+            if (revision.HasValue)
+            {
+                r = revision.Value;
+            }
+            else
             {
                 WindowsVersion.WindowsVersionInfo wvi = new WindowsVersion.WindowsVersionInfo();
                 WindowsVersion.GetWindowsBuildandRevision(wvi);
@@ -152,66 +156,41 @@ namespace Coloma
 
             foreach (ColomaEvent evt in eventlist)
             {
-                if (evt.Logname == "Setup")
-                {
-                    r = evt.Revision;
-                }
-                else
-                {
-                    evt.Revision = r;
-                }
+                evt.Revision = r;
             }
         }
 
-        private static bool AddSetupLogToList(List<KBRevision> kbrlist, List<ColomaEvent> list)
+        private static uint? GetRevisionFromSetupLog(List<KBRevision> kbrlist)
         {
-            // this retrieves the build.revision and branch for the current client
-            WindowsVersion.WindowsVersionInfo wvi = new WindowsVersion.WindowsVersionInfo();
-            WindowsVersion.GetWindowsBuildandRevision(wvi);
-            uint revision = wvi.revision;
-            bool setuplog = false;
-
-            EventLogQuery query = new EventLogQuery("Setup", PathType.LogName);
-            query.ReverseDirection = false;
+            EventLogQuery query = new EventLogQuery("Setup", PathType.LogName) {ReverseDirection = false};
             EventLogReader reader = new EventLogReader(query);
 
             EventRecord entry;
             while ((entry = reader.ReadEvent()) != null)
             {
-                if ((entry.Level == (byte)StandardEventLevel.Critical) ||
-                    (entry.Level == (byte)StandardEventLevel.Error) ||
-                    (entry.Level == (byte)StandardEventLevel.Warning) ||
-                    (entry.Id == 2))
+                if (entry.Id != 2) continue;
+
+                // this is a KB installed message, figure out which KB it is and update the revision of that entry
+                string msg = CleanUpMessage(entry.FormatDescription());
+                string kb = "KB";
+                int i = msg.IndexOf(kb);
+
+                if (-1 != i)
                 {
-                    string msg = CleanUpMessage(entry.FormatDescription());
+                    // we found the kb article
+                    kb = msg.Substring(i, 9);
 
-                    if (entry.Id == 2)
+                    foreach (KBRevision rev in kbrlist)
                     {
-                        // this is a KB installed message, figure out which KB it is and update the revision of that entry
-                        string kb = "KB";
-                        int i = msg.IndexOf(kb);
-                        setuplog = true;
-
-                        if (-1 != i)
+                        if (rev.Kb == kb)
                         {
-                            // we found the kb article
-                            kb = msg.Substring(i, 9);
-
-                            foreach (KBRevision rev in kbrlist)
-                            {
-                                if (rev.Kb == kb)
-                                {
-                                    revision = rev.Revision;
-                                }
-                            }
+                            return rev.Revision;
                         }
                     }
-                    list.Add(new ColomaEvent(wvi.branch, wvi.build, revision, entry.MachineName, DeviceId,
-                                             Environment.UserName, "Setup", entry.LevelDisplayName, entry.Id,
-                                             entry.TimeCreated.GetValueOrDefault(), entry.ProviderName, msg));
                 }
             }
-            return setuplog;
+
+            return null;
         }
 
         private static void AddLogToList(string logName, List<ColomaEvent> list, DateTime dt)
@@ -240,28 +219,56 @@ namespace Coloma
                 var entryLogName = entry.LogName;
                 var entryId = entry.Id;
                 var entryProviderName = entry.ProviderName;
+                var entryActivityId = entry.ActivityId;
+                var entryProcessId = entry.ProcessId;
+                var entryThreadId = entry.ThreadId;
+                var entryProperties = entry.Properties;
+                var entryQualifiers = entry.Qualifiers;
+                var entryRecordId = entry.RecordId;
+                var entryVersion = entry.Version;
 
-                string entryLevelDisplayName = "";
-                try
-                {
-                    entryLevelDisplayName = entry.LevelDisplayName;
-                }
-                catch
-                {
-                    if (entry.Level != null) entryLevelDisplayName = ((StandardEventLevel) entry.Level).ToString();
-                }
+                var entryPropertiesString = string.Join(", ", entryProperties.Select(
+                    p => p.Value is byte[]
+                        ? System.Text.Encoding.Unicode.GetString((byte[])p.Value).Replace(@"\0", "")
+                        : p.Value));
+                entryPropertiesString = CleanUpMessage(entryPropertiesString);
 
                 string entryMessage = CleanUpMessage(entry.FormatDescription());
                 if (entryMessage == null && entry.Properties.Count > 0)
                 {
+                    // Format the message to match how it is shown the event viewer
                     string descNotFoundMsgTemplate = "The description for Event ID '{0}' in Source '{1}' cannot be found.  The local computer may not have the necessary registry information or message DLL files to display the message, or you may not have permission to access them.  The following information is part of the event:{2}";
-                    string entryProperties = String.Join(", ", entry.Properties.Select(p => String.Format("'{0}'", p.Value)));
-                    entryMessage = String.Format(descNotFoundMsgTemplate, entryId, entryProviderName, entryProperties);
+                    entryMessage = String.Format(descNotFoundMsgTemplate, entryId, entryProviderName, entryPropertiesString);
                 }
+
+                var entryUserId = "";
+                try { entryUserId = entry.UserId.Value; }
+                catch { }
+
+                string entryLevelDisplayName = "";
+                try { entryLevelDisplayName = entry.LevelDisplayName; }
+                catch { if (entry.Level != null) entryLevelDisplayName = ((StandardEventLevel) entry.Level).ToString(); }
+
+                var entryKeywords = entry.Keywords;
+                var entryKeywordsDisplayNames = "";
+                try { entryKeywordsDisplayNames = String.Join(", ", entry.KeywordsDisplayNames); }
+                catch { entryKeywordsDisplayNames = entryKeywords.ToString(); }
+
+                var entryOpcode = entry.Opcode;
+                var entryOpcodeDisplayName = "";
+                try { entryOpcodeDisplayName = entry.OpcodeDisplayName; }
+                catch { entryOpcodeDisplayName = entryOpcode.ToString(); }
+
+                var entryTask = entry.Task;
+                var entryTaskDisplayName = "";
+                try { entryTaskDisplayName = entry.TaskDisplayName; }
+                catch { entryTaskDisplayName = entryTask.ToString(); }
 
                 list.Add(new ColomaEvent(wvi.branch, wvi.build, 0, entryMachineName, DeviceId,
                     Environment.UserName, entryLogName, entryLevelDisplayName, entryId,
-                    entryTimeCreated, entryProviderName, entryMessage));
+                    entryTimeCreated, entryProviderName, entryMessage, 
+                    entryActivityId, entryProcessId, entryThreadId, entryPropertiesString, entryQualifiers, entryRecordId, 
+                    entryUserId, entryVersion, entryKeywordsDisplayNames, entryOpcodeDisplayName, entryTaskDisplayName));
             }
         }
         

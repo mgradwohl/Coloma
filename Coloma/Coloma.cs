@@ -16,8 +16,9 @@ namespace Coloma
         private static readonly string DeviceId = GetDeviceId();
 
         private static readonly string descNotFoundMsgTemplate = "The description for Event ID '{0}' in Source '{1}' cannot be found.  The local computer may not have the necessary registry information or message DLL files to display the message, or you may not have permission to access them.  The following information is part of the event:{2}";
-        private static readonly string structuredQueryTemplate = "<QueryList> <Query Id=\"0\"> <Select Path=\"Setup\">*[System[(Level=1 or Level=2 or Level=3)]]</Select> <Select Path=\"Application\">*[System[(Level=1 or Level=2 or Level=3) and TimeCreated[@SystemTime&gt;='{0:O}']]]</Select> <Select Path=\"System\">*[System[(Level=1 or Level=2 or Level=3) and TimeCreated[@SystemTime&gt;='{0:O}']]]</Select> <Select Path=\"Security\">*[System[(Level=1 or Level=2 or Level=3) and TimeCreated[@SystemTime&gt;='{0:O}']]]</Select> <Select Path=\"HardwareEvents\">*[System[(Level=1 or Level=2 or Level=3) and TimeCreated[@SystemTime&gt;='{0:O}']]]</Select> </Query> </QueryList>";
+        private static readonly string structuredQueryTemplate = "<QueryList> <Query Id=\"0\"> <Select Path=\"Setup\">*[System[(Level=1 or Level=2 or Level=3) or (EventID=2)]]</Select> <Select Path=\"Application\">*[System[(Level=1 or Level=2 or Level=3) and TimeCreated[@SystemTime&gt;='{0:O}']]]</Select> <Select Path=\"System\">*[System[(Level=1 or Level=2 or Level=3) and TimeCreated[@SystemTime&gt;='{0:O}']]]</Select> <Select Path=\"Security\">*[System[(Level=1 or Level=2 or Level=3) and TimeCreated[@SystemTime&gt;='{0:O}']]]</Select> <Select Path=\"HardwareEvents\">*[System[(Level=1 or Level=2 or Level=3) and TimeCreated[@SystemTime&gt;='{0:O}']]]</Select> </Query> </QueryList>";
 
+        private static uint defaultRevision = 11;
         // TH2 revisions
         private static List<KBRevision> kbrlist = new List<KBRevision>
             {
@@ -59,25 +60,6 @@ namespace Coloma
             Console.WriteLine("Coloma is gathering log entries for your machine.");
             Console.WriteLine();
 
-            // create the file on the network share, unless it's unavailable, then use the desktop
-            string filename = Assembly.GetExecutingAssembly().GetName().Version.ToString() + "_" + Environment.MachineName + "_" + Environment.UserName + "_" + Environment.TickCount.ToString() + ".tsv";
-            string filepath = @"\\iefs\users\mattgr\Coloma" + "\\Coloma" + "_" + filename;
-            StreamWriter sw;
-            try
-            {
-                if (saveLocal) throw new Exception();
-                sw = new StreamWriter(filepath, false, System.Text.Encoding.UTF8);
-            }
-            catch (Exception)
-            {
-                filepath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + "\\Coloma" + "_" + filename;
-                sw = new StreamWriter(filepath, false, System.Text.Encoding.UTF8);
-
-                Console.WriteLine(saveLocal
-                    ? "Coloma will write the .tsv to your desktop."
-                    : "Coloma could not access the network share and will write the .tsv to your desktop.");
-            }
-
             // just get logs since last time OR since 4/1/2016
             DateTime dt = new DateTime(2016, 4, 1, 0, 0, 0, 0, DateTimeKind.Local);
             if (onlyNewEvents)
@@ -88,7 +70,6 @@ namespace Coloma
             // Tell the user what we're doing
             Console.WriteLine("Any error, warning, or KB install written after " + dt.ToShortDateString());
             Console.WriteLine("From the following logs: System, Security, Hardware Events, Setup, and Application");
-            Console.WriteLine("Data will be saved to " + filepath);
 
             if (DeviceId.Contains("UNKNOWN"))
             {
@@ -105,22 +86,46 @@ namespace Coloma
             AddLogToList(eventlist, dt);
             timer.Stop();
 
-            Console.WriteLine("done in {0}ms", timer.ElapsedMilliseconds);
+            Console.WriteLine("done. {0} events in {1}ms", eventlist.Count, timer.ElapsedMilliseconds);
 
-            Console.Write("Writing file");
-            int i = 0;
-            sw.WriteLine(ColomaEvent.Header());
-            foreach (ColomaEvent evt in eventlist)
+            if (eventlist.Count > 0)
             {
-                i++;
-                sw.WriteLine(evt.ToString());
-                if (i % 10 == 0)
+
+                // create the file on the network share, unless it's unavailable, then use the desktop
+                string filename = Assembly.GetExecutingAssembly().GetName().Version.ToString() + "_" + Environment.MachineName + "_" + Environment.UserName + "_" + Environment.TickCount.ToString() + ".tsv";
+                string filepath = @"\\iefs\users\mattgr\Coloma" + "\\Coloma" + "_" + filename;
+                StreamWriter sw;
+                try
                 {
-                    Console.Write(".");
+                    if (saveLocal) throw new Exception();
+                    sw = new StreamWriter(filepath, false, System.Text.Encoding.UTF8);
                 }
+                catch (Exception)
+                {
+                    filepath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + "\\Coloma" + "_" + filename;
+                    sw = new StreamWriter(filepath, false, System.Text.Encoding.UTF8);
+
+                    Console.WriteLine(saveLocal
+                        ? "Coloma will write the .tsv to your desktop."
+                        : "Coloma could not access the network share and will write the .tsv to your desktop.");
+                }
+
+                Console.Write("Writing file to " + filepath);
+
+                int i = 0;
+                sw.WriteLine(ColomaEvent.Header());
+                foreach (ColomaEvent evt in eventlist)
+                {
+                    i++;
+                    sw.WriteLine(evt.ToString());
+                    if (i % 10 == 0)
+                    {
+                        Console.Write(".");
+                    }
+                }
+                Console.WriteLine(" done");
+                sw.Close();
             }
-            Console.WriteLine(" done");
-            sw.Close();
 
             Console.WriteLine();
             Console.WriteLine("Done, thank you. Hit any key to exit");
@@ -133,6 +138,8 @@ namespace Coloma
             WindowsVersion.WindowsVersionInfo wvi = new WindowsVersion.WindowsVersionInfo();
             WindowsVersion.GetWindowsBuildandRevision(wvi);
             uint revision = wvi.revision;
+
+            int firstKbEvent = 0;
 
             Guid servicingProvider = new Guid("BD12F3B8-FC40-4A61-A307-B7A013A069C1");
             string structuredQuery = string.Format(System.Globalization.CultureInfo.InvariantCulture, Coloma.structuredQueryTemplate, dt.ToUniversalTime());
@@ -180,15 +187,21 @@ namespace Coloma
                         string kb = "KB";
                         int i = entryMessage.IndexOf(kb);
 
+                        if (firstKbEvent == 0)
+                        {
+                            firstKbEvent = list.Count + 1;
+                        }
+
                         if (-1 != i)
                         {
                             // we found the kb article
                             kb = entryMessage.Substring(i, 9);
 
-                            foreach (KBRevision rev in kbrlist)
+                            foreach (KBRevision rev in Coloma.kbrlist)
                             {
                                 if (rev.Kb == kb)
                                 {
+                                    Console.WriteLine(rev.Kb + " " + rev.Revision);
                                     revision = rev.Revision;
                                 }
                             }
@@ -199,6 +212,21 @@ namespace Coloma
                 list.Add(new ColomaEvent(wvi.branch, wvi.build, revision, entryMachineName, DeviceId,
                     Environment.UserName, entryLogName, entryLevelDisplayName, entryId,
                     entryTimeCreated, entryProviderName, entryMessage));
+            }
+
+            // If there was a KB Installed event, go back and set all the events before it to have the default revision
+            if (firstKbEvent != 0)
+            {
+                foreach (var evt in list)
+                {
+                    firstKbEvent--;
+                    if (firstKbEvent <= 0)
+                    {
+                        break;
+                    }
+
+                    evt.Revision = Coloma.defaultRevision;
+                }
             }
         }
         

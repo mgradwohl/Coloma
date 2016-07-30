@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Microsoft.Win32;
+using System.Diagnostics;
 
 namespace Coloma
 {
@@ -13,6 +14,27 @@ namespace Coloma
     {
         // Just load deviceId once, it's independant of other operations.
         private static readonly string DeviceId = GetDeviceId();
+
+        private static readonly string descNotFoundMsgTemplate = "The description for Event ID '{0}' in Source '{1}' cannot be found.  The local computer may not have the necessary registry information or message DLL files to display the message, or you may not have permission to access them.  The following information is part of the event:{2}";
+        private static readonly string structuredQueryTemplate = "<QueryList> <Query Id=\"0\"> <Select Path=\"Setup\">*[System[(Level=1 or Level=2 or Level=3)]]</Select> <Select Path=\"Application\">*[System[(Level=1 or Level=2 or Level=3) and TimeCreated[@SystemTime&gt;='{0:O}']]]</Select> <Select Path=\"System\">*[System[(Level=1 or Level=2 or Level=3) and TimeCreated[@SystemTime&gt;='{0:O}']]]</Select> <Select Path=\"Security\">*[System[(Level=1 or Level=2 or Level=3) and TimeCreated[@SystemTime&gt;='{0:O}']]]</Select> <Select Path=\"HardwareEvents\">*[System[(Level=1 or Level=2 or Level=3) and TimeCreated[@SystemTime&gt;='{0:O}']]]</Select> </Query> </QueryList>";
+
+        // TH2 revisions
+        private static List<KBRevision> kbrlist = new List<KBRevision>
+            {
+                new KBRevision(10586, 420, "KB3163018"),
+                new KBRevision(10586, 318, "KB3156421"),
+                new KBRevision(10586, 218, "KB3147458"),
+                new KBRevision(10586, 164, "KB3140768"),
+                new KBRevision(10586, 122, "KB3140743"),
+                new KBRevision(10586, 104, "KB3135173"),
+                new KBRevision(10586, 71, "KB3124262"),
+                new KBRevision(10586, 63, "KB3124263"),
+                new KBRevision(10586, 36, "KB3124200"),
+                new KBRevision(10586, 29, "KB3116900"),
+                new KBRevision(10586, 17, "KB3116908"),
+                new KBRevision(10586, 14, "KB3120677"),
+                new KBRevision(10586, 11, "KB3118754")
+            };
 
         static void Main(string[] args)
         {
@@ -75,47 +97,15 @@ namespace Coloma
 
             Console.WriteLine();
 
-            Console.Write("KB Articles for revision install history... ");
-            // TH2 revisions
-            List<KBRevision> kbrlist = new List<KBRevision>
-            {
-                new KBRevision(10586, 420, "KB3163018"),
-                new KBRevision(10586, 318, "KB3156421"),
-                new KBRevision(10586, 218, "KB3147458"),
-                new KBRevision(10586, 164, "KB3140768"),
-                new KBRevision(10586, 122, "KB3140743"),
-                new KBRevision(10586, 104, "KB3135173"),
-                new KBRevision(10586, 71, "KB3124262"),
-                new KBRevision(10586, 63, "KB3124263"),
-                new KBRevision(10586, 36, "KB3124200"),
-                new KBRevision(10586, 29, "KB3116900"),
-                new KBRevision(10586, 17, "KB3116908"),
-                new KBRevision(10586, 14, "KB3120677"),
-                new KBRevision(10586, 11, "KB3118754")
-            };
-            Console.WriteLine("done");
-
             List<ColomaEvent> eventlist = new List<ColomaEvent>();
 
-            // Setup logs are different than other logs
-            Console.Write("Setup... ");
-            bool setuplog = AddSetupLogToList(kbrlist, eventlist);
-            Console.WriteLine("done");
+            Console.WriteLine("Collecting events...");
 
-            // Go through the 'standard' logs
-            string[] Logs = { "System", "HardwareEvents", "Application", "Security" };
-            foreach (string log in Logs)
-            {
-                Console.Write(log + "... ");
-                AddLogToList(log, eventlist, dt);
-                Console.WriteLine("done");
-            }
+            Stopwatch timer = Stopwatch.StartNew();
+            AddLogToList(eventlist, dt);
+            timer.Stop();
 
-            // gets all the events in order, and uses info from the setup log to ensure the correct revision
-            // if the setuplog had no entries, then use the current build and revision
-            Console.Write("Sort and fixup... ");
-            SortandFix(eventlist, setuplog);
-            Console.WriteLine("done");
+            Console.WriteLine("done in {0}ms", timer.ElapsedMilliseconds);
 
             Console.Write("Writing file");
             int i = 0;
@@ -137,105 +127,29 @@ namespace Coloma
             Console.ReadKey(true);
         }
 
-        private static void SortandFix(List<ColomaEvent> eventlist, bool setuplog)
-        {
-            uint r = 11;
-            if (!setuplog)
-            {
-                WindowsVersion.WindowsVersionInfo wvi = new WindowsVersion.WindowsVersionInfo();
-                WindowsVersion.GetWindowsBuildandRevision(wvi);
-                r = wvi.revision;
-            }
-
-            // sort the list by date
-            eventlist.Sort();
-
-            foreach (ColomaEvent evt in eventlist)
-            {
-                if (evt.Logname == "Setup")
-                {
-                    r = evt.Revision;
-                }
-                else
-                {
-                    evt.Revision = r;
-                }
-            }
-        }
-
-        private static bool AddSetupLogToList(List<KBRevision> kbrlist, List<ColomaEvent> list)
+        private static void AddLogToList(List<ColomaEvent> list, DateTime dt)
         {
             // this retrieves the build.revision and branch for the current client
             WindowsVersion.WindowsVersionInfo wvi = new WindowsVersion.WindowsVersionInfo();
             WindowsVersion.GetWindowsBuildandRevision(wvi);
             uint revision = wvi.revision;
-            bool setuplog = false;
 
-            EventLogQuery query = new EventLogQuery("Setup", PathType.LogName);
+            Guid servicingProvider = new Guid("BD12F3B8-FC40-4A61-A307-B7A013A069C1");
+            string structuredQuery = string.Format(System.Globalization.CultureInfo.InvariantCulture, Coloma.structuredQueryTemplate, dt.ToUniversalTime());
+
+            EventLogQuery query = new EventLogQuery(null, PathType.LogName, structuredQuery);
             query.ReverseDirection = false;
             EventLogReader reader = new EventLogReader(query);
-
-            EventRecord entry;
-            while ((entry = reader.ReadEvent()) != null)
-            {
-                if ((entry.Level == (byte)StandardEventLevel.Critical) ||
-                    (entry.Level == (byte)StandardEventLevel.Error) ||
-                    (entry.Level == (byte)StandardEventLevel.Warning) ||
-                    (entry.Id == 2))
-                {
-                    string msg = CleanUpMessage(entry.FormatDescription());
-
-                    if (entry.Id == 2)
-                    {
-                        // this is a KB installed message, figure out which KB it is and update the revision of that entry
-                        string kb = "KB";
-                        int i = msg.IndexOf(kb);
-                        setuplog = true;
-
-                        if (-1 != i)
-                        {
-                            // we found the kb article
-                            kb = msg.Substring(i, 9);
-
-                            foreach (KBRevision rev in kbrlist)
-                            {
-                                if (rev.Kb == kb)
-                                {
-                                    revision = rev.Revision;
-                                }
-                            }
-                        }
-                    }
-                    list.Add(new ColomaEvent(wvi.branch, wvi.build, revision, entry.MachineName, DeviceId,
-                                             Environment.UserName, "Setup", entry.LevelDisplayName, entry.Id,
-                                             entry.TimeCreated.GetValueOrDefault(), entry.ProviderName, msg));
-                }
-            }
-            return setuplog;
-        }
-
-        private static void AddLogToList(string logName, List<ColomaEvent> list, DateTime dt)
-        {
-            // this retrieves the build.revision and branch for the current client
-            WindowsVersion.WindowsVersionInfo wvi = new WindowsVersion.WindowsVersionInfo();
-            WindowsVersion.GetWindowsBuildandRevision(wvi);
-
-            EventLogQuery query = new EventLogQuery(logName, PathType.LogName);
-            query.ReverseDirection = false;
-            EventLogReader reader = new EventLogReader(query);
+            // The Event Log can only return a maximum of 2 MB at a time, but it does not actually limit itself to this when collecting <BatchSize> events.
+            // If the number of requested events exceeds 2 MB of event data an exception will be throw (System.Diagnostics.Eventing.Reader.EventLogException: The data area passed to a system call is too small).
+            // Since an event is at most 64 KB, 30 events is a conservative limit to ensure the 2 MB limit is never crossed.
+            // Setting a smaller batch size does have a small performance impact, but not enough to notice in this scenario.
+            reader.BatchSize = 30;
 
             EventRecord entry;
             while ((entry = reader.ReadEvent()) != null)
             {
                 var entryTimeCreated = entry.TimeCreated ?? new DateTime();
-
-                if (entryTimeCreated < dt)
-                    continue;
-
-                if ((entry.Level != (byte) StandardEventLevel.Critical) &&
-                    (entry.Level != (byte) StandardEventLevel.Error) &&
-                    (entry.Level != (byte) StandardEventLevel.Warning)) continue;
-
                 var entryMachineName = entry.MachineName;
                 var entryLogName = entry.LogName;
                 var entryId = entry.Id;
@@ -254,12 +168,35 @@ namespace Coloma
                 string entryMessage = CleanUpMessage(entry.FormatDescription());
                 if (entryMessage == null && entry.Properties.Count > 0)
                 {
-                    string descNotFoundMsgTemplate = "The description for Event ID '{0}' in Source '{1}' cannot be found.  The local computer may not have the necessary registry information or message DLL files to display the message, or you may not have permission to access them.  The following information is part of the event:{2}";
                     string entryProperties = String.Join(", ", entry.Properties.Select(p => String.Format("'{0}'", p.Value)));
-                    entryMessage = String.Format(descNotFoundMsgTemplate, entryId, entryProviderName, entryProperties);
+                    entryMessage = String.Format(Coloma.descNotFoundMsgTemplate, entryId, entryProviderName, entryProperties);
                 }
 
-                list.Add(new ColomaEvent(wvi.branch, wvi.build, 0, entryMachineName, DeviceId,
+                if (entry.ProviderId.HasValue && entry.ProviderId.Value == servicingProvider)
+                {
+                    if (entryId == 2)
+                    {
+                        // this is a KB installed message, figure out which KB it is and update the revision of that entry
+                        string kb = "KB";
+                        int i = entryMessage.IndexOf(kb);
+
+                        if (-1 != i)
+                        {
+                            // we found the kb article
+                            kb = entryMessage.Substring(i, 9);
+
+                            foreach (KBRevision rev in kbrlist)
+                            {
+                                if (rev.Kb == kb)
+                                {
+                                    revision = rev.Revision;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                list.Add(new ColomaEvent(wvi.branch, wvi.build, revision, entryMachineName, DeviceId,
                     Environment.UserName, entryLogName, entryLevelDisplayName, entryId,
                     entryTimeCreated, entryProviderName, entryMessage));
             }

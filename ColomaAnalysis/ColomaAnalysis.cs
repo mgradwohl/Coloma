@@ -46,7 +46,7 @@ namespace ColomaAnalysis
                 if (firstFile == false)
                 {
                     string header =
-                        "branch	Build	Revision	machineName	deviceId	userName	Logname	level	instanceid	timeCreated	source	message\r\n";
+                        "branch	Build	MostRecentKb	machineName	deviceId	userName	Logname	level	instanceid	TimeCreated	source	message\r\n";
                     
                     // Need to seek 3 more bytes, because the files are UTF-8 meaning they have a 3 byte header.
                     input.Seek(header.Length + 3, SeekOrigin.Current);

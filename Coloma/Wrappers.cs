@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Coloma
 {
-    public class ColomaEvent : IComparable
+    public class ColomaEvent
     {
         private string branch;
         private string level;
@@ -12,19 +12,20 @@ namespace Coloma
         private string deviceId;
         private string userName;
         private long instanceid;
-        private DateTime timeCreated;
         private string source;
         private string message;
 
-        public uint Revision { get; set; }
+        public KBRevision MostRecentKb { get; set; }
 
         public string Logname { get; set; }
 
         public uint Build { get; set; }
 
+        public DateTime TimeCreated { get; private set; }
+
         public ColomaEvent( string branch,
                             uint build,
-                            uint revision,
+                            KBRevision mostRecentKb,
                             string machineName,
                             string deviceId,
                             string userName,
@@ -37,46 +38,29 @@ namespace Coloma
         {
             this.branch = branch;
             this.Build = build;
-            this.Revision = revision;
+            this.MostRecentKb = mostRecentKb;
             this.machineName = machineName;
             this.deviceId = deviceId;
             this.userName = userName;
             this.Logname = logName;
             this.level = level;
-            this.timeCreated = timeCreated;
+            this.TimeCreated = timeCreated;
             this.source = source;
             this.message = Message;
             this.instanceid = id;
         }
 
-        public int CompareTo(object obj)
-        {
-            if (obj == null) return 1;
-
-            ColomaEvent eventToCompare = obj as ColomaEvent;
-            if (eventToCompare.timeCreated < timeCreated)
-            {
-                return 1;
-            }
-            if (eventToCompare.timeCreated > timeCreated)
-            {
-                return -1;
-            }
-
-            return 0;
-        }
-
         public override string ToString()
         {
-            string ret = string.Join("\t", branch, Build.ToString(), Revision.ToString(), machineName, deviceId,
-                                     userName, Logname, level, instanceid.ToString(), timeCreated.ToString(), source, message);
+            string ret = string.Join("\t", branch, Build.ToString(), MostRecentKb.Kb, machineName, deviceId,
+                                     userName, Logname, level, instanceid.ToString(), TimeCreated.ToString(), source, message);
             return ret;
         }
 
         public static string Header()
         {
-            string ret = string.Join("\t", nameof(branch), nameof(Build), nameof(Revision), nameof(machineName), nameof(deviceId),
-                                     nameof(userName), nameof(Logname), nameof(level), nameof(instanceid), nameof(timeCreated),
+            string ret = string.Join("\t", nameof(branch), nameof(Build), nameof(MostRecentKb), nameof(machineName), nameof(deviceId),
+                                     nameof(userName), nameof(Logname), nameof(level), nameof(instanceid), nameof(TimeCreated),
                                      nameof(source), nameof(message));
             return ret;
         }
@@ -85,20 +69,24 @@ namespace Coloma
 
     public class KBRevision
     {
-        public uint Build { get; set; }
-
-        public uint Revision { get; set; }
-
         public string Kb { get; set; }
 
-        public DateTime Installdate { get; set; }
+        public DateTime InstallDate { get; set; }
 
-        public KBRevision(uint b, uint r, string k)
+        public bool FoundInSetupLog { get; set; }
+
+        public KBRevision()
         {
-            Build = b;
-            Revision = r;
-            Kb = k;
-            Installdate = new DateTime();
+            Kb = "NoKbData";
+            InstallDate = DateTime.MinValue;
+            FoundInSetupLog = false;
+        }
+
+        public KBRevision(KBRevision other)
+        {
+            this.Kb = other.Kb;
+            this.InstallDate = other.InstallDate;
+            this.FoundInSetupLog = other.FoundInSetupLog;
         }
     }
 

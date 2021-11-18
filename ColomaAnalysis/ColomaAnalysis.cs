@@ -10,14 +10,14 @@ namespace ColomaAnalysis
         static void Main(string[] args)
         {
             // This is the directory where TSVs are sourced.
-            string folderPath = @"\\iefs\users\mattgr\Coloma\";
+            string folderPath = @"D:\source\Coloma\";
 
             // Get data schema version of Coloma.exe
             // We use this assembly version to verify source TSVs are from the right version of Coloma.exe
             string colomaAssemblyVersion = typeof(Coloma.Coloma).Assembly.GetName().Version.ToString();
 
             // We also use the assembly version to output the aggregated TSV to the correct directory.
-            string filepath = @"\\iefs\users\mattgr\Coloma\Analysis_" + colomaAssemblyVersion + @"\";
+            string filepath = @"D:\source\Coloma\Analysis_" + colomaAssemblyVersion + @"\";
 
             // It is safe to directly call CreateDirectory to ensure the directory exists
             Directory.CreateDirectory(filepath);

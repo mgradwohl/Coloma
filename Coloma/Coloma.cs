@@ -39,7 +39,7 @@ namespace Coloma
 
             // create the file on the network share, unless it's unavailable, then use the desktop
             string filename = Assembly.GetExecutingAssembly().GetName().Version.ToString() + "_" + Environment.MachineName + "_" + Environment.UserName + "_" + Environment.TickCount.ToString() + ".tsv";
-            string filepath = @"\\iefs\users\mattgr\Coloma" + "\\Coloma" + "_" + filename;
+            string filepath = @"D:\source\Coloma\" + "Coloma" + "_" + filename;
             StreamWriter sw;
             try
             {
